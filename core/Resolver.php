@@ -1,8 +1,17 @@
 <?php
+
 namespace Core;
 
 class Resolver
 {
+
+    /**
+     * Rutas (relativas al proyecto) donde NO se debe buscar layout
+     */
+    private const OMIT_LAYOUT_PATHS = [
+        '/app/api/',
+        '/app/test-js/',
+    ];
     public static function resolve(array $segments, string $basePath, array &$params)
     {
         if (empty($segments)) {
@@ -27,8 +36,26 @@ class Resolver
         return null;
     }
 
-    public static function findLayout(string $path)
+    /**
+     * Verifica si la ruta está dentro de una ruta omitida
+     */
+    private static function isOmittedPath(string $absolutePath): bool
     {
+        $projectRoot = self::normalizePath(realpath(__DIR__ . '/../'));
+        $relativePath = str_replace($projectRoot, '', $absolutePath) . '/';
+
+        foreach (self::OMIT_LAYOUT_PATHS as $omit) {
+            if (str_starts_with($relativePath, $omit)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /* public static function findLayout(string $path)
+    {
+        var_dump($path);
         while ($path !== dirname($path)) {
             if (file_exists("$path/layout.php")) {
                 return "$path/layout.php";
@@ -36,5 +63,34 @@ class Resolver
             $path = dirname($path);
         }
         return null;
+    }
+ */
+
+    public static function findLayout(string $path): ?string
+    {
+        $path = self::normalizePath(realpath($path));
+
+        while ($path && $path !== dirname($path)) {
+
+            if (self::isOmittedPath($path)) {
+                return null;
+            }
+
+            if (file_exists($path . '/layout.php')) {
+                return $path . '/layout.php';
+            }
+
+            $path = dirname($path);
+        }
+
+        return null;
+    }
+
+    /**
+     * Normaliza separadores de ruta
+     */
+    private static function normalizePath(string $path): string
+    {
+        return rtrim(str_replace('\\', '/', $path), '/');
     }
 }

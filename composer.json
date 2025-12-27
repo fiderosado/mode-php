@@ -7,8 +7,10 @@
         }
     ],
     "require": {
-          "php": ">=8.0",
-        "nesbot/carbon": "^3.11"
+        "nesbot/carbon": "^3.11",
+        "vlucas/phpdotenv": "^5.6",
+        "firebase/php-jwt": "^7.0",
+        "tailwindphp/tailwindphp": "*"
     },
     "autoload": {
         "psr-4": {
