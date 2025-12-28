@@ -274,6 +274,11 @@
             if (prop === 'useEffect') return useEffect;
             if (prop === 'events') return events;
             if (prop === 'useMemo') return useMemo;
+            
+            // Navigation methods
+            if (prop === 'navigation') {
+                return window.SerJSNavigation || {};
+            }
 
             const value = target[prop];
             if (typeof value !== 'function') return value;
