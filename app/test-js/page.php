@@ -173,35 +173,46 @@
         <button id="slideBtn" class="btn-secondary">Slide Toggle</button> -->
 
         <script>
+        
+                const { useRef, useEffect, useState , useMemo , setText , reRender } = SerJS;
 
-            const { useRef , useEffect , useState , setText } = Ser
+                const boxRef = useRef('animatedBox');
+                const countUsersRef = useRef('countUsers');
+ 
+                const [count, setCount] = useState(1);
 
-            const boxRef = useRef('animatedBox');
+                const double = useMemo(() => {
+                    console.log('recalculando...');
+                    return count.current * 2;
+                }, [count]);
 
-            const [count, setCount] = useState(8);
+                useEffect(() => {
+                    console.log("el estado cambio solo al inicio --> ", count , count.current );
+                    console.log("estado del memo",double, double.current);
+                    reRender(boxRef, { count : count.current });
+                    reRender(countUsersRef, { count : count.current });
+                }, []);
 
-            console.log(count);              // 8
-            console.log(typeof count);       // "number"
-            console.log(`Count: ${count}`);  // "Count: 8"
+                useEffect(() => {
+                    console.log("el estado cambio --> ", count , count.current );
+                    reRender(boxRef, { count : count.current });
+                    reRender(countUsersRef, { count : count.current });
+                    console.log("estado del memo",double, double.current);
+                }, [count]);
 
-            Ser.useEffect(() => {
-                console.log('useEffect: ', count);  // Usa el valor directamente
-                setText(boxRef, count.value); 
-            }, [count]);
-
-            const btnRef = useRef('toggleBtn');
-            btnRef.onClick(() => {
-                setCount(prev => prev + 1);
-            });
+                const btnRef = useRef('toggleBtn');
+                btnRef.onClick(() => {
+                    setCount(prev => prev + 1);
+                });
 
         </script>
 
         <div class="box" id="animatedBox">
-            ¡Hola! Soy una caja animada 🎨
+            ¡Hola! Soy una caja animada 🎨 ${count}
         </div>
         
         <!-- Lista de usuarios -->
-        <h2>Lista de Usuarios</h2>
+        <h2 id="countUsers">Lista de Usuarios  ${count}</h2>
         <div id="userList"></div>
     </div>
 </body>
