@@ -167,20 +167,32 @@
         
         <!-- Botones de prueba -->
 
-      
-
         <h2 style="margin-top: 30px;">Animaciones</h2>
         <button id="toggleBtn" class="btn-secondary">Toggle Box</button>
-        <button id="fadeBtn" class="btn-secondary">Fade Toggle</button>
-        <button id="slideBtn" class="btn-secondary">Slide Toggle</button>
-        
+        <!-- <button id="fadeBtn" class="btn-secondary">Fade Toggle</button>
+        <button id="slideBtn" class="btn-secondary">Slide Toggle</button> -->
+
         <script>
-            const { useRef , slideUp } = Ser
-            // Creamos la ref apuntando automáticamente al elemento por id
+
+            const { useRef , useEffect , useState , setText } = Ser
+
             const boxRef = useRef('animatedBox');
 
-            // No importa si esto se ejecuta antes del DOM
-            slideUp(boxRef, 5000);
+            const [count, setCount] = useState(8);
+
+            console.log(count);              // 8
+            console.log(typeof count);       // "number"
+            console.log(`Count: ${count}`);  // "Count: 8"
+
+            Ser.useEffect(() => {
+                console.log('useEffect: ', count);  // Usa el valor directamente
+                setText(boxRef, count.value); 
+            }, [count]);
+
+            const btnRef = useRef('toggleBtn');
+            btnRef.onClick(() => {
+                setCount(prev => prev + 1);
+            });
 
         </script>
 
