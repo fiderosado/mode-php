@@ -266,6 +266,22 @@
         }
     };
 
+    // Definimos una función de carga que devuelve una Promesa
+    const loadSerJSStore = () => {
+        return new Promise((resolve, reject) => {
+            if (window.SerJSStore) return resolve(window.SerJSStore);
+
+            const script = document.createElement('script');
+            script.src = '../../SerJS/core/SerJSStore.js';
+            script.async = true; // Carga sin bloquear el resto de la página
+
+            script.onload = () => resolve(window.SerJSStore);
+            script.onerror = () => reject(new Error("Error al cargar SerJSStore.js"));
+
+            document.head.appendChild(script);
+        });
+    };
+
     const proxy = new Proxy(methods, {
         get(target, prop) {
 
@@ -274,10 +290,20 @@
             if (prop === 'useEffect') return useEffect;
             if (prop === 'events') return events;
             if (prop === 'useMemo') return useMemo;
-            
+
             // Navigation methods
             if (prop === 'navigation') {
-                return window.SerJSNavigation || {};
+                return window.SerJSNavigation || {};// interesante esta declaracion del hook dentro del principal
+            }
+
+            if (prop === 'store') {
+                console.log("pasando por aca");
+                
+                return async () => {
+                    if (window.SerJSStore) return window.SerJSStore;
+                    await loadSerJSStore(); // La función que creamos en el paso anterior
+                    return window.SerJSStore;
+                };
             }
 
             const value = target[prop];
