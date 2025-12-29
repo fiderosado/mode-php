@@ -133,19 +133,58 @@
             return navigationState.currentPath;
         },
 
+        /**
+         * Ejemplos de conversión de URLSearchParams a diferentes formatos:
+         * 
+         * 1. Convertir a array de pares [key, value]:
+         *    const searchParams = Nav.useSearchParams();
+         *    const arrayPares = Array.from(searchParams.entries());
+         *    // Resultado: [ ['id', '123'], ['filter', 'active'], ['sort', 'date'] ]
+         * 
+         * 2. Convertir a array solo de valores:
+         *    const searchParams = Nav.useSearchParams();
+         *    const arrayValores = Array.from(searchParams.values());
+         *    // Resultado: [ '123', 'active', 'date' ]
+         * 
+         * 3. Convertir a array solo de claves:
+         *    const searchParams = Nav.useSearchParams();
+         *    const arrayKeys = Array.from(searchParams.keys());
+         *    // Resultado: [ 'id', 'filter', 'sort' ]
+         * 
+         * 4. Convertir a objeto (más común):
+         *    const searchParams = Nav.useSearchParams();
+         *    const objeto = Object.fromEntries(searchParams);
+         *    // Resultado: { id: '123', filter: 'active', sort: 'date' }
+         * 
+         * 5. Iterar directamente:
+         *    const searchParams = Nav.useSearchParams();
+         *    const array = [];
+         *    for (const [key, value] of searchParams) {
+         *        array.push({ key, value });
+         *    }
+         *    // Resultado: [ {key: 'id', value: '123'}, {key: 'filter', value: 'active'} ]
+         * 
+         * 6. Usar spread operator:
+         *    const searchParams = Nav.useSearchParams();
+         *    const array = [...searchParams];
+         *    // Resultado: [ ['id', '123'], ['filter', 'active'] ]
+         */
         useSearchParams() {
             return new URLSearchParams(navigationState.currentSearch);
         },
 
-        useParams() {
-            return window.__ROUTE_PARAMS__ || {};
+        useParams(newParams) {
+            return {
+                params : newParams || {},
+                route :  window.__ROUTE_PARAMS__ || {}
+            }
         },
 
-        useRouter() {
+        useRouter(params = {}) {
             return {
                 pathname: navigationState.currentPath,
                 query: Object.fromEntries(new URLSearchParams(navigationState.currentSearch)),
-                params: this.useParams(),
+                params: this.useParams( params?.params ),
                 asPath: navigationState.currentPath + navigationState.currentSearch + navigationState.currentHash,
                 push: navigation.push.bind(navigation),
                 replace: navigation.replace.bind(navigation),
@@ -276,111 +315,6 @@
     };
 
     // ====================================
-    // COMPONENTES
-    // ====================================
-
-    const components = {
-        Link(props) {
-            const {
-                href,
-                children,
-                className = '',
-                activeClassName = 'active',
-                exact = false,
-                prefetch: shouldPrefetch = false,
-                replace: shouldReplace = false,
-                scroll = true,
-                target,
-                ...attrs
-            } = props;
-
-            const link = document.createElement('a');
-            link.href = href;
-            link.className = className;
-            
-            if (target) {
-                link.target = target;
-            }
-            
-            // Active class
-            if (utilities.isActive(href, exact)) {
-                link.classList.add(activeClassName);
-            }
-
-            // Children
-            if (typeof children === 'string') {
-                link.textContent = children;
-            } else if (children instanceof Node) {
-                link.appendChild(children);
-            }
-
-            // Additional attributes
-            Object.entries(attrs).forEach(([key, value]) => {
-                link.setAttribute(key, String(value));
-            });
-
-            // Prefetch on hover
-            if (shouldPrefetch) {
-                link.addEventListener('mouseenter', () => {
-                    navigation.prefetch(href);
-                }, { once: true });
-            }
-
-            // Intercept clicks
-            link.addEventListener('click', (e) => {
-                // Allow special clicks
-                if (
-                    target === '_blank' ||
-                    e.ctrlKey || 
-                    e.shiftKey || 
-                    e.altKey || 
-                    e.metaKey ||
-                    e.button !== 0
-                ) {
-                    return;
-                }
-
-                e.preventDefault();
-                
-                if (shouldReplace) {
-                    navigation.replace(href, { scroll });
-                } else {
-                    navigation.push(href, { scroll });
-                }
-            });
-
-            return link;
-        },
-
-        createNavLinks(items) {
-            const fragment = document.createDocumentFragment();
-            
-            items.forEach(item => {
-                const link = this.Link(item);
-                fragment.appendChild(link);
-            });
-            
-            return fragment;
-        },
-
-        NavBar(config) {
-            const { items, className = '', activeClassName = 'active' } = config;
-            const nav = document.createElement('nav');
-            nav.className = className;
-            
-            items.forEach(item => {
-                const link = this.Link({
-                    ...item,
-                    activeClassName
-                });
-                nav.appendChild(link);
-            });
-            
-            return nav;
-        }
-    };
-
-    // ====================================
     // HISTORIAL
     // ====================================
 
@@ -467,11 +401,6 @@
             // Utilidades
             if (prop in utilities) {
                 return utilities[prop].bind(utilities);
-            }
-            
-            // Componentes
-            if (prop in components) {
-                return components[prop].bind(components);
             }
             
             // Redirecciones
