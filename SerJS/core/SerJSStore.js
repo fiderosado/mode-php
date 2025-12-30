@@ -5,7 +5,7 @@
  */
 
 (function (window, document) {
-    
+
     'use strict';
 
     let isReady = false;
@@ -17,7 +17,7 @@
     // ====================================
     // STORES REGISTRY
     // ====================================
-    
+
     const storesRegistry = new Map();
 
     // ====================================
@@ -25,7 +25,7 @@
     // ====================================
 
     function create(createState, options = {}) {
-        
+
         const {
             name = `store_${Date.now()}`,
             persist = true,
@@ -150,7 +150,7 @@
         const api = {
             getState: get,
             setState: set,
-            subscribe : subscribeStore,
+            subscribe: subscribeStore,
             destroy,
             reset,
             getInitialState,
@@ -163,8 +163,8 @@
         // ====================================
 
         // Inicializar estado
-        state = typeof createState === 'function' 
-            ? createState(set, get, api) 
+        state = typeof createState === 'function'
+            ? createState(set, get, api)
             : createState;
 
         // Cargar estado persistido si existe
@@ -173,7 +173,7 @@
                 const persistedData = storage.getItem(name);
                 if (persistedData) {
                     const parsed = JSON.parse(persistedData);
-                    
+
                     // Verificar versión y migrar si es necesario
                     if (parsed.version !== version) {
                         state = migrate(parsed.state || parsed);
@@ -198,25 +198,26 @@
 
         // Función para crear un objeto reactivo para una propiedad del estado
         function createReactiveProp(propName) {
+
             if (reactiveProps.has(propName)) {
                 return reactiveProps.get(propName);
             }
 
             const subscribers = new Set();
-            
+
             // Función helper para obtener el valor actual
             function getCurrentValue() {
-                return state && typeof state === 'object' && propName in state 
-                    ? state[propName] 
+                return state && typeof state === 'object' && propName in state
+                    ? state[propName]
                     : undefined;
             }
-            
+
             // Objeto base con métodos especiales
             const reactiveBase = {
                 get current() {
                     return getCurrentValue();
                 },
-                
+
                 subscribe(callback) {
                     subscribers.add(callback);
                     // También suscribirse a cambios del store completo
@@ -228,7 +229,7 @@
                         const newValue = newState && typeof newState === 'object' && propName in newState
                             ? newState[propName]
                             : undefined;
-                        
+
                         // Notificar solo si esta propiedad específica cambió
                         if (!Object.is(prevValue, newValue)) {
                             try {
@@ -238,7 +239,6 @@
                             }
                         }
                     });
-                    
                     return () => {
                         subscribers.delete(callback);
                         if (storeUnsub && typeof storeUnsub === 'function') {
@@ -246,27 +246,46 @@
                         }
                     };
                 },
-                
+
+                toJson() {
+                    return getCurrentValue();
+                },
+
+                valueOf() {
+                    return getCurrentValue();
+                },
+
+                toString() {
+                    return String(getCurrentValue());
+                },
+
                 // ID interno para identificar la propiedad
-                _propName: propName
+                propName: propName
             };
 
             // Crear un Proxy que envuelva el valor actual y delegue todas las operaciones
             const reactiveProxy = new Proxy(reactiveBase, {
                 get(target, prop) {
-                    // Si es una propiedad especial del objeto reactivo, retornarla
-                    if (prop === 'current' || prop === 'subscribe' || prop === '_propName') {
+
+                    if(prop in target){
                         return target[prop];
                     }
-                    
+
+                    // Si es una propiedad especial del objeto reactivo, retornarla
+                   /*  if (prop === 'current' || prop === 'subscribe' || prop === 'propName' || prop === 'toString') {
+                        return target[prop];
+                    }
+ */
                     // Obtener el valor actual
                     const currentValue = getCurrentValue();
-                    
+
+                   // console.log("currentValue:", { target, prop, currentValue })
+
                     // Si el valor es null o undefined, retornar undefined
                     if (currentValue == null) {
                         return undefined;
                     }
-                    
+
                     // Si es un objeto/array, delegar al valor actual
                     if (typeof currentValue === 'object') {
                         const value = currentValue[prop];
@@ -276,35 +295,35 @@
                         }
                         return value;
                     }
-                    
-                    // Para primitivos, retornar undefined (no tienen propiedades)
-                    return undefined;
+
+                    // Para primitivos, retornar undefined (no tienen propiedades), cambie a currentValue
+                    return undefined; 
                 },
-                
+
                 set(target, prop, value) {
                     // No permitir modificar directamente, debe hacerse a través del store
                     console.warn(`[SerJSStore] No se puede modificar directamente la propiedad "${propName}". Usa los métodos del store para actualizar el estado.`);
                     return false;
                 },
-                
+
                 has(target, prop) {
                     // Verificar si existe en el objeto base o en el valor actual
-                    if (prop === 'current' || prop === 'subscribe' || prop === '_propName') {
+                    if (prop === 'current' || prop === 'subscribe' || prop === 'propName') {
                         return true;
                     }
-                    
+
                     const currentValue = getCurrentValue();
                     if (currentValue != null && typeof currentValue === 'object') {
                         return prop in currentValue;
                     }
-                    
+
                     return false;
                 },
-                
+
                 ownKeys(target) {
                     const currentValue = getCurrentValue();
-                    const baseKeys = ['current', 'subscribe', '_propName'];
-                    
+                    const baseKeys = ['current', 'subscribe', 'propName'];
+
                     if (currentValue != null && typeof currentValue === 'object') {
                         if (Array.isArray(currentValue)) {
                             // Para arrays, retornar índices y métodos especiales
@@ -312,23 +331,23 @@
                         }
                         return [...baseKeys, ...Object.keys(currentValue)];
                     }
-                    
+
                     return baseKeys;
                 },
-                
+
                 getOwnPropertyDescriptor(target, prop) {
-                    if (prop === 'current' || prop === 'subscribe' || prop === '_propName') {
+                    if (prop === 'current' || prop === 'subscribe' || prop === 'propName') {
                         return Object.getOwnPropertyDescriptor(target, prop);
                     }
-                    
+
                     const currentValue = getCurrentValue();
                     if (currentValue != null && typeof currentValue === 'object' && prop in currentValue) {
                         return Object.getOwnPropertyDescriptor(currentValue, prop);
                     }
-                    
+
                     return undefined;
                 },
-                
+
                 // Conversión a primitivo - permite usar el objeto directamente como valor
                 [Symbol.toPrimitive](hint) {
                     const val = getCurrentValue();
@@ -336,7 +355,7 @@
                     if (hint === 'string') return String(val);
                     return val;
                 },
-                
+
                 // Para iteración (arrays)
                 [Symbol.iterator]() {
                     const currentValue = getCurrentValue();
@@ -349,16 +368,16 @@
                     // Si no es iterable, retornar un iterador vacío
                     return [][Symbol.iterator]();
                 },
-                
+
                 // Para JSON.stringify
-                toJSON() {
+                toJson() {
                     return getCurrentValue();
                 },
-                
+
                 valueOf() {
                     return getCurrentValue();
                 },
-                
+
                 toString() {
                     return String(getCurrentValue());
                 }
@@ -379,49 +398,49 @@
                     }
                     return value;
                 }
-                
+
                 // Si no es un método administrativo, delegar al estado actual
                 if (state && typeof state === 'object' && prop in state) {
                     const value = state[prop];
-                    
+
                     // Si es una función del estado, retornarla directamente
                     if (typeof value === 'function') {
                         return value;
                     }
-                    
+
                     // Si es una propiedad del estado, retornar objeto reactivo
                     // Esto permite usar propiedades del store como dependencias en useEffect
                     return createReactiveProp(prop);
                 }
-                
+
                 // Si no se encuentra, devolver undefined
                 return undefined;
             },
-            
+
             set(target, prop, value) {
                 // Permitir modificar propiedades del estado directamente
                 if (state && typeof state === 'object' && prop in state) {
                     set({ [prop]: value });
                     return true;
                 }
-                
+
                 // Permitir modificar métodos administrativos (aunque no es recomendado)
                 target[prop] = value;
                 return true;
             },
-            
+
             has(target, prop) {
                 // Verificar si existe en métodos administrativos o en el estado
                 return prop in target || (state && typeof state === 'object' && prop in state);
             },
-            
+
             ownKeys(target) {
                 // Combinar keys de métodos administrativos y del estado
                 const adminKeys = Object.keys(target);
                 const stateKeys = state && typeof state === 'object' ? Object.keys(state) : [];
                 return [...new Set([...adminKeys, ...stateKeys])];
             },
-            
+
             getOwnPropertyDescriptor(target, prop) {
                 // Devolver descriptor de métodos administrativos o del estado
                 if (prop in target) {
@@ -446,11 +465,11 @@
 
     function useStore(store, selector, equalityFn) {
         const state = store.getState();
-        
+
         if (selector) {
             return selector(state);
         }
-        
+
         return state;
     }
 
@@ -471,12 +490,12 @@
         devtools(config, devtoolsOptions = {}) {
             return (set, get, api) => {
                 const { name = 'store', enabled = true } = devtoolsOptions;
-                
+
                 const setState = (partial, replace) => {
                     const prevState = get();
                     set(partial, replace);
                     const nextState = get();
-                    
+
                     if (enabled && console.groupCollapsed) {
                         console.groupCollapsed(`[${name}] State Update`);
                         console.log('Previous:', prevState);
@@ -522,11 +541,11 @@
                 const setState = (partial, replace) => {
                     const currentState = get();
                     past.push(currentState);
-                    
+
                     if (past.length > limit) {
                         past.shift();
                     }
-                    
+
                     future.length = 0;
                     set(partial, replace);
                 };
@@ -645,9 +664,27 @@
             stores.forEach((storeConfig, index) => {
                 const storeName = storeConfig.name || `store${index}`;
                 const store = storeConfig.store || storeConfig;
-                
+
                 if (typeof store.getState === 'function') {
-                    combinedState[storeName] = store.getState();
+                    const state = store.getState();
+
+                    // Validar que no existan conflictos de claves de estado entre stores
+                    if (combinedState[storeName]) {
+                        throw new Error(`[SerJSStore] Conflicto al combinar stores: el nombre "${storeName}" ya existe en el estado combinado.`);
+                    }
+
+                    combinedState[storeName] = state;
+
+                    // Validar métodos/propiedades duplicadas entre stores combinados
+                    Object.keys(store).forEach((key) => {
+                        if (combinedMethods[key] && combinedMethods[key] !== store) {
+                            throw new Error(
+                                `[SerJSStore] Conflicto al combinar stores: el método/propiedad "${key}" ` +
+                                `ya existe en otro store combinado.`
+                            );
+                        }
+                    });
+
                     combinedMethods[storeName] = store;
                 }
             });
@@ -705,30 +742,30 @@
             if (prop === 'create') {
                 return create;
             }
-            
+
             if (prop === 'useStore') {
                 return useStore;
             }
-            
+
             if (prop === 'createHook') {
                 return createHook;
             }
-            
+
             // Middleware
             if (prop === 'middleware') {
                 return middleware;
             }
-            
+
             // Utilities
             if (prop in utilities) {
                 return utilities[prop];
             }
-            
+
             // Storage adapters
             if (prop === 'storage') {
                 return storage;
             }
-            
+
             // Registry access
             if (prop === 'stores') {
                 return storesRegistry;

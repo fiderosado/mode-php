@@ -372,26 +372,6 @@
 
         const {subscribe , todos , addTodo , toggleTodo , deleteTodo , clearCompleted , getFilteredTodos , getStats , setFilter , filter} = await importModule('useTodoStore','../../store/todo.js');
 
-        //subscribe(()=>renderTodoList());
-
-            console.log(todos); // Muestra el array directamente
-            console.log(todos.length); // Accede a la propiedad length
-            console.log(todos[0]); // Accede a elementos del array
-
-            // Suscribirse directamente al store
-/* subscribe(() => {
-    console.log("todos cambió:", todos);
-    console.log("todos.length:", todos.length);
-    console.log("todos[0]:", todos[0]);
-}); */
-
-        // Suscribirse directamente a la propiedad reactiva
-todos.subscribe((newValue) => {
-    console.log("todos cambió:", newValue);
-    console.log("todos.length:", newValue?.length);
-    console.log("todos[0]:", newValue?.[0]);
-});
-
         // ====================================
         // REFERENCIAS A ELEMENTOS
         // ====================================
@@ -407,11 +387,6 @@ todos.subscribe((newValue) => {
         const filterActiveRef = useRef('filter-active-btn');
         const filterCompletedRef = useRef('filter-completed-btn');
         const clearBtnRef = useRef('clear-btn');
-
-        // ====================================
-        // ESTADOS LOCALES CON SERJS
-        // ====================================
-        const [renderTrigger, setRenderTrigger] = useState(0);
 
         // ====================================
         // UTILIDADES
@@ -460,7 +435,7 @@ todos.subscribe((newValue) => {
         };
 
         function clearCompletedAction() {
-            const stats = useTodoStore.getStats();
+            const stats = getStats();
             if (stats.completed > 0) {
                 if (confirm(`¿Eliminar ${stats.completed} tarea(s) completada(s)?`)) {
                     clearCompleted();
@@ -509,12 +484,10 @@ todos.subscribe((newValue) => {
             
             // Debug panel
 
-            //console.log("debug data:" , {filter , todos} );
-            
             const debugData = {
-                filter: filter.current,  // Usar get() para acceder al estado
+                filter: filter, 
                 totalTodos: todos.length,
-                todos: todos.current.map(t => ({
+                todos: todos.map(t => ({
                     id: t.id,
                     text: t.text.substring(0, 30) + (t.text.length > 30 ? '...' : ''),
                     completed: t.completed
@@ -589,8 +562,8 @@ todos.subscribe((newValue) => {
         }, []);
 
         useEffect(() => {
-            console.log("todos store:", todos );
-          renderTodoList()
+            console.log("todos store:", todos.current );
+            renderTodoList()
         }, [todos , filter]);
 
     </script>
