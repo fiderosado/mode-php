@@ -267,18 +267,18 @@ Escucha eventos de navegación.
 
 ```javascript
 // Cuando la ruta cambia
-const unsubscribe = Nav.events.on('routeChange', (data) => {
+const unsubscribe = Nav.on('routeChange', (data) => {
     console.log('Nueva ruta:', data.pathname);
     console.log('Query:', data.query);
 });
 
 // Cuando los query params cambian
-Nav.events.on('queryChange', (data) => {
+Nav.on('queryChange', (data) => {
     console.log('Nuevos params:', data.query);
 });
 
 // Cuando el sistema está listo
-Nav.events.on('ready', () => {
+Nav.on('ready', () => {
     console.log('Navigation ready!');
 });
 
@@ -291,15 +291,15 @@ Deja de escuchar un evento.
 
 ```javascript
 const handler = (data) => console.log(data);
-Nav.events.on('routeChange', handler);
-Nav.events.off('routeChange', handler);
+Nav.on('routeChange', handler);
+Nav.off('routeChange', handler);
 ```
 
 #### `events.once(eventName, callback)`
 Escucha un evento una sola vez.
 
 ```javascript
-Nav.events.once('routeChange', (data) => {
+Nav.once('routeChange', (data) => {
     console.log('Primera navegación:', data.pathname);
 });
 ```
@@ -308,7 +308,7 @@ Nav.events.once('routeChange', (data) => {
 Emite un evento personalizado.
 
 ```javascript
-Nav.events.emit('customEvent', { foo: 'bar' });
+Nav.emit('customEvent', { foo: 'bar' });
 ```
 
 ---
@@ -548,7 +548,7 @@ function Pagination({ currentPage, totalPages }) {
 ```javascript
 const protectedRoutes = ['/dashboard', '/profile', '/settings'];
 
-Nav.events.on('routeChange', (data) => {
+Nav.on('routeChange', (data) => {
     const isProtected = protectedRoutes.some(route => 
         data.pathname.startsWith(route)
     );
@@ -643,7 +643,7 @@ Nav.Link({ href: '/blog', prefetch: true })
 
 3. **Limpia listeners cuando no los necesites**
 ```javascript
-const unsubscribe = Nav.events.on('routeChange', handler);
+const unsubscribe = Nav.on('routeChange', handler);
 // Cuando termines:
 unsubscribe();
 ```
@@ -656,7 +656,7 @@ Nav.Link({ href: '/', exact: true })
 5. **Combina con SerJS para reactividad total**
 ```javascript
 const [route] = SerJS.useState(Nav.pathname);
-Nav.events.on('routeChange', (data) => {
+Nav.on('routeChange', (data) => {
     setRoute(data.pathname);
 });
 ```

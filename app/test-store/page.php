@@ -292,15 +292,13 @@
         }
     </style>
 
-    <!-- Incluir SerJS y SerJSStore -->
+    <!-- Incluir SerJS -->
     <script src="../../SerJS/SerJS.js"></script>
-   <!--  <script src="../../SerJS/core/SerJSStore.js"></script> -->
-    
 </head>
 <body>
     <div class="container">
         <h1>📝 Lista de Tareas</h1>
-        <p class="subtitle">Ejemplo de SerJSStore con persistencia en localStorage</p>
+        <p class="subtitle">Ejemplo de SerJSStore con persistencia + importModule</p>
 
         <!-- Estadísticas -->
         <div class="stats">
@@ -358,17 +356,24 @@
         </div>
 
         <div class="footer">
-            Powered by SerJS + SerJSStore • Los datos se guardan automáticamente
+            Powered by SerJS + SerJSStore + importModule • Los datos se guardan automáticamente
         </div>
     </div>
-
-
 
     <script type="module">
         // ====================================
         // DESTRUCTURAR SERJS
         // ====================================
-        const { useRef, useState, useEffect, setText, setHTML, store } = SerJS;
+        const { useRef, useState, useEffect, setText, setHTML, importModule , getModuleCache } = SerJS;
+
+        console.log("SerJS Cache Modules", getModuleCache());
+
+        // ====================================
+        // IMPORTAR EL STORE
+        // ====================================
+
+        const useTodoStore = await importModule('useTodoStore','../../store/todo.js');
+        useTodoStore.subscribe(()=>renderTodoList());
 
         // ====================================
         // REFERENCIAS A ELEMENTOS
@@ -385,70 +390,6 @@
         const filterActiveRef = useRef('filter-active-btn');
         const filterCompletedRef = useRef('filter-completed-btn');
         const clearBtnRef = useRef('clear-btn');
-
-        // ====================================
-        // CREAR STORE DE TAREAS
-        // ====================================
-
-        console.log("que tipo es store:" , store , typeof store);
-
-        const useTodoStore = await store.create((set, get) => ({
-            todos: [],
-            filter: 'all',
-            
-            addTodo: (text) => {
-                if (!text.trim()) return;
-                const newTodo = {
-                    id: Date.now(),
-                    text: text.trim(),
-                    completed: false,
-                    createdAt: new Date().toISOString()
-                };
-                set({ todos: [...get().todos, newTodo] });
-            },
-            
-            toggleTodo: (id) => {
-                set({
-                    todos: get().todos.map(todo =>
-                        todo.id === id ? { ...todo, completed: !todo.completed } : todo
-                    )
-                });
-            },
-            
-            deleteTodo: (id) => {
-                set({ todos: get().todos.filter(todo => todo.id !== id) });
-            },
-            
-            setFilter: (filter) => {
-                set({ filter });
-            },
-            
-            getFilteredTodos: () => {
-                const { todos, filter } = get();
-                switch(filter) {
-                    case 'active': return todos.filter(t => !t.completed);
-                    case 'completed': return todos.filter(t => t.completed);
-                    default: return todos;
-                }
-            },
-            
-            clearCompleted: () => {
-                set({ todos: get().todos.filter(t => !t.completed) });
-            },
-            
-            getStats: () => {
-                const todos = get().todos;
-                return {
-                    total: todos.length,
-                    active: todos.filter(t => !t.completed).length,
-                    completed: todos.filter(t => t.completed).length
-                };
-            }
-        }), {
-            name: 'todo-list-app',
-            persist: true,
-            version: 1
-        });
 
         // ====================================
         // ESTADOS LOCALES CON SERJS
@@ -483,17 +424,17 @@
         // ====================================
         // FUNCIONES DE EVENTOS
         // ====================================
-        const toggleTodo = (id) => {
+        function toggleTodo(id) {
             useTodoStore.getState().toggleTodo(id);
         };
 
-        const deleteTodo = (id) => {
+        function deleteTodo(id) {
             if (confirm('¿Estás seguro de eliminar esta tarea?')) {
                 useTodoStore.getState().deleteTodo(id);
             }
         };
 
-        const setFilter = (filter, event) => {
+        function setFilter(filter, event) {
             useTodoStore.getState().setFilter(filter);
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 btn.classList.remove('active');
@@ -503,7 +444,7 @@
             }
         };
 
-        const clearCompleted = () => {
+        function clearCompleted() {
             const stats = useTodoStore.getState().getStats();
             if (stats.completed > 0) {
                 if (confirm(`¿Eliminar ${stats.completed} tarea(s) completada(s)?`)) {
@@ -516,6 +457,7 @@
         // RENDERIZADO CON SERJS
         // ====================================
         function renderTodoList() {
+
             const state = useTodoStore.getState();
             const filteredTodos = state.getFilteredTodos();
             const stats = state.getStats();
@@ -534,7 +476,7 @@
                 if (emptyStateRef.current) emptyStateRef.current.style.display = 'none';
                 
                 const todosHtml = filteredTodos.map(todo => `
-                    <li class="todo-item ${todo.completed ? 'completed' : ''}" data-id="${todo.id}">
+                <li class="todo-item ${todo.completed ? 'completed' : ''}" data-id="${todo.id}">
                         <input 
                             type="checkbox" 
                             class="todo-checkbox"
@@ -545,7 +487,7 @@
                         <button class="delete-btn">
                             Eliminar
                         </button>
-                    </li>
+                </li>
                 `).join('');
                 
                 setHTML(todoListRef, todosHtml);
@@ -563,15 +505,6 @@
             };
             setText(debugOutputRef, JSON.stringify(debugData, null, 2));
         }
-
-        // ====================================
-        // EFECTOS REACTIVOS CON SERJS
-        // ====================================
-        
-        // Renderizar cuando cambia el trigger
-        useEffect(() => {
-            renderTodoList();
-        }, [renderTrigger]);
 
         // ====================================
         // EVENTOS CON SERJS
@@ -629,13 +562,6 @@
         });
 
         // ====================================
-        // SUSCRIPCIÓN AL STORE
-        // ====================================
-        useTodoStore.subscribe(() => {
-            setRenderTrigger(prev => prev + 1);
-        });
-
-        // ====================================
         // INICIALIZACIÓN
         // ====================================
         useEffect(() => {
@@ -643,8 +569,6 @@
             if (todoInputRef.current) {
                 todoInputRef.current.focus();
             }
-            console.log('✅ SerJS + SerJSStore inicializados');
-            console.log('📦 Store:', useTodoStore.getState());
         }, []);
     </script>
 </body>

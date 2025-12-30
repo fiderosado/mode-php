@@ -240,10 +240,7 @@
             resolve(ref).forEach(el => {
                 el.style[property] = String(value);
             });
-        }
-    };
-
-    const events = {
+        },
         onClick(ref, callback) {
             resolve(ref).forEach(el => {
                 el.addEventListener('click', callback);
@@ -266,44 +263,109 @@
         }
     };
 
-    // Definimos una función de carga que devuelve una Promesa
-    const loadSerJSStore = () => {
-        return new Promise((resolve, reject) => {
-            if (window.SerJSStore) return resolve(window.SerJSStore);
+    const moduleCache = useMemo(() => new Map(), []);
+
+    // Función genérica para cargar módulos de SerJS dinámicamente
+    function loadSerJSModule(moduleName, scriptPath) {
+
+        if (window[moduleName]) {
+            return Promise.resolve(window[moduleName]);
+        }
+    
+        if (moduleCache.current.has(moduleName)) {
+            return moduleCache.current.get(moduleName);
+        }
+
+        const promise = new Promise((resolve, reject) => {
 
             const script = document.createElement('script');
-            script.src = '../../SerJS/core/SerJSStore.js';
-            script.async = true; // Carga sin bloquear el resto de la página
+            script.src = scriptPath;
+            script.type = 'module';
+            script.async = true;
 
-            script.onload = () => resolve(window.SerJSStore);
-            script.onerror = () => reject(new Error("Error al cargar SerJSStore.js"));
+            script.onload = () => {
+                if (window[moduleName]) {
+                    resolve(window[moduleName]);
+                } else {
+                    reject(new Error(`El módulo ${moduleName} no se cargó correctamente`));
+                }
+            };
+
+            script.onerror = () => {
+                moduleCache.current.delete(moduleName);
+                reject(new Error(`Error al cargar ${scriptPath}`));
+            };
 
             document.head.appendChild(script);
         });
+
+        moduleCache.current.set(moduleName, promise);
+        return promise;
     };
 
-    const proxy = new Proxy(methods, {
+    function getModuleCache() { return moduleCache.current; }
+
+    window.SerJS = new Proxy(methods, {
         get(target, prop) {
 
             if (prop === 'useRef') return useRef;
             if (prop === 'useState') return useState;
             if (prop === 'useEffect') return useEffect;
-            if (prop === 'events') return events;
             if (prop === 'useMemo') return useMemo;
+            if (prop === 'getModuleCache') return getModuleCache;
+
+            // Método para importar módulos dinámicamente
+            if (prop === 'importModule') return async (moduleName, modulePath) => {
+                const normalizedPath = modulePath.startsWith('./') || modulePath.startsWith('../') ? modulePath : `./${modulePath}`;
+                if (!window[moduleName]) {
+                    await loadSerJSModule(moduleName, normalizedPath);
+                }
+                return new Proxy(window[moduleName], {
+                    get(target, method) {
+                        const value = target[method];
+                        if (typeof value === 'function') {
+                            return value.bind(target);
+                        }
+                        return value;
+                    }
+                });
+            }
 
             // Navigation methods
             if (prop === 'navigation') {
-                return window.SerJSNavigation || {};// interesante esta declaracion del hook dentro del principal
+                return new Proxy({}, {
+                    get(target, method) {
+                        return async (...args) => {
+                            if (!window.SerJSNavigation) {
+                                await loadSerJSModule('SerJSNavigation', '../../SerJS/core/SerJSNavigation.js')
+                            }
+                            const value = window.SerJSNavigation[method];
+                            if (typeof value === 'function') {
+                                return value(...args);
+                            }
+                            return value;
+                        };
+                    }
+                });
             }
 
             if (prop === 'store') {
-                console.log("pasando por aca");
-                
-                return async () => {
-                    if (window.SerJSStore) return window.SerJSStore;
-                    await loadSerJSStore(); // La función que creamos en el paso anterior
-                    return window.SerJSStore;
-                };
+                // Crear un proxy que intercepte el acceso al método create
+                return new Proxy({}, {
+                    get(target, method) {
+                        return async (...args) => {
+                            // Cargar SerJSStore si no está disponible
+                            if (!window.SerJSStore) {
+                                await loadSerJSModule('SerJSStore', '../../SerJS/core/SerJSStore.js')
+                            }
+                            // Llamar al método en SerJSStore
+                            if (typeof window.SerJSStore[method] === 'function') {
+                                return window.SerJSStore[method](...args);
+                            }
+                            throw new Error(`SerJSStore.${method} no es una función`);
+                        };
+                    }
+                });
             }
 
             const value = target[prop];
@@ -316,7 +378,5 @@
             };
         }
     });
-
-    window.SerJS = proxy;
 
 })(window, document);

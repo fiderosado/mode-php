@@ -448,7 +448,4 @@
 
     window.SerJSNavigation = NavigationProxy;
 
-    // Alias corto
-    window.SerNav = NavigationProxy;
-
 })(window, document);
