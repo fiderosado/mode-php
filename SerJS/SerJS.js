@@ -44,7 +44,7 @@
             },
 
             // Método interno para suscripciones
-            _subscribe(callback) {
+            subscribe(callback) {
                 state.subscribers.add(callback);
                 return () => state.subscribers.delete(callback);
             },
@@ -102,8 +102,8 @@
         // Con dependencias: suscribirse a los estados
         deps.forEach(dep => {
 
-            if (dep && typeof dep._subscribe === 'function') {
-                const unsub = dep._subscribe(() => {
+            if (dep && typeof dep.subscribe === 'function') {
+                const unsub = dep.subscribe(() => {
                     run();
                 });
                 unsubscribers.push(unsub);
@@ -115,13 +115,6 @@
                 );
             }
         });
-
-        // Ejecutar una vez al inicio
-        /*   if (isReady) {
-              run();
-          } else {
-              queue.push(run);
-          } */
 
         // Retornar función de limpieza
         return () => {
@@ -150,8 +143,8 @@
                     }
                 };
                 deps.forEach(dep => {
-                    if (dep && typeof dep._subscribe === 'function') {
-                        record.unsubscribers.push(dep._subscribe(compute));
+                    if (dep && typeof dep.subscribe === 'function') {
+                        record.unsubscribers.push(dep.subscribe(compute));
                     }
                 });
             }

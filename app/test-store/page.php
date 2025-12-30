@@ -370,10 +370,27 @@
         // IMPORTAR EL STORE
         // ====================================
 
-        const useTodoStore = await importModule('useTodoStore','../../store/todo.js');
-        useTodoStore.subscribe(()=>renderTodoList());
+        const {subscribe , todos , addTodo , toggleTodo , deleteTodo , clearCompleted , getFilteredTodos , getStats , setFilter , filter} = await importModule('useTodoStore','../../store/todo.js');
 
-        console.log("todo store:", useTodoStore.getState().todos );
+        //subscribe(()=>renderTodoList());
+
+            console.log(todos); // Muestra el array directamente
+            console.log(todos.length); // Accede a la propiedad length
+            console.log(todos[0]); // Accede a elementos del array
+
+            // Suscribirse directamente al store
+/* subscribe(() => {
+    console.log("todos cambió:", todos);
+    console.log("todos.length:", todos.length);
+    console.log("todos[0]:", todos[0]);
+}); */
+
+        // Suscribirse directamente a la propiedad reactiva
+todos.subscribe((newValue) => {
+    console.log("todos cambió:", newValue);
+    console.log("todos.length:", newValue?.length);
+    console.log("todos[0]:", newValue?.[0]);
+});
 
         // ====================================
         // REFERENCIAS A ELEMENTOS
@@ -424,18 +441,16 @@
         // ====================================
         // FUNCIONES DE EVENTOS
         // ====================================
-        function toggleTodo(id) {
-            useTodoStore.getState().toggleTodo(id);
-        };
+        
 
-        function deleteTodo(id) {
+        function deleteTodoAction(id) {
             if (confirm('¿Estás seguro de eliminar esta tarea?')) {
-                useTodoStore.getState().deleteTodo(id);
+                deleteTodo(id);
             }
         };
 
-        function setFilter(filter, event) {
-            useTodoStore.getState().setFilter(filter);
+        function setFilterAction(filter, event) {
+            setFilter(filter);
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
@@ -444,11 +459,11 @@
             }
         };
 
-        function clearCompleted() {
-            const stats = useTodoStore.getState().getStats();
+        function clearCompletedAction() {
+            const stats = useTodoStore.getStats();
             if (stats.completed > 0) {
                 if (confirm(`¿Eliminar ${stats.completed} tarea(s) completada(s)?`)) {
-                    useTodoStore.getState().clearCompleted();
+                    clearCompleted();
                 }
             }
         };
@@ -458,9 +473,8 @@
         // ====================================
         function renderTodoList() {
 
-            const state = useTodoStore.getState();
-            const filteredTodos = state.getFilteredTodos();
-            const stats = state.getStats();
+            const filteredTodos = getFilteredTodos();
+            const stats = getStats();
             
             // Actualizar estadísticas usando setText de SerJS
             setText(totalCountRef, stats.total);
@@ -494,10 +508,13 @@
             }
             
             // Debug panel
+
+            //console.log("debug data:" , {filter , todos} );
+            
             const debugData = {
-                filter: state.filter,
-                totalTodos: state.todos.length,
-                todos: state.todos.map(t => ({
+                filter: filter.current,  // Usar get() para acceder al estado
+                totalTodos: todos.length,
+                todos: todos.current.map(t => ({
                     id: t.id,
                     text: t.text.substring(0, 30) + (t.text.length > 30 ? '...' : ''),
                     completed: t.completed
@@ -515,7 +532,7 @@
             if (todoInputRef.current) {
                 const text = todoInputRef.current.value;
                 if (text.trim()) {
-                    useTodoStore.getState().addTodo(text);
+                    addTodo(text);
                     todoInputRef.current.value = '';
                     todoInputRef.current.focus();
                 }
@@ -527,7 +544,7 @@
             if (e.key === 'Enter' && todoInputRef.current) {
                 const text = todoInputRef.current.value;
                 if (text.trim()) {
-                    useTodoStore.getState().addTodo(text);
+                    addTodo(text);
                     todoInputRef.current.value = '';
                     todoInputRef.current.focus();
                 }
@@ -535,10 +552,10 @@
         });
 
         // Eventos de botones estáticos
-        filterAllRef.onClick((e) => setFilter('all', e));
-        filterActiveRef.onClick((e) => setFilter('active', e));
-        filterCompletedRef.onClick((e) => setFilter('completed', e));
-        clearBtnRef.onClick(clearCompleted);
+        filterAllRef.onClick((e) => setFilterAction('all', e));
+        filterActiveRef.onClick((e) => setFilterAction('active', e));
+        filterCompletedRef.onClick((e) => setFilterAction('completed', e));
+        clearBtnRef.onClick(clearCompletedAction);
 
         // Delegación de eventos para la lista de tareas
         todoListRef.onClick((e) => {
@@ -556,7 +573,7 @@
                 const todoItem = e.target.closest('.todo-item');
                 if (todoItem) {
                     const id = parseInt(todoItem.dataset.id);
-                    deleteTodo(id);
+                    deleteTodoAction(id);
                 }
             }
         });
@@ -570,6 +587,12 @@
                 todoInputRef.current.focus();
             }
         }, []);
+
+        useEffect(() => {
+            console.log("todos store:", todos );
+          renderTodoList()
+        }, [todos , filter]);
+
     </script>
 </body>
 </html>

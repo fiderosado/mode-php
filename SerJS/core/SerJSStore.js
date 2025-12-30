@@ -77,7 +77,7 @@
             }
         }
 
-        function subscribe(listener) {
+        function subscribeStore(listener) {
             listeners.add(listener);
 
             return () => {
@@ -150,7 +150,7 @@
         const api = {
             getState: get,
             setState: set,
-            subscribe,
+            subscribe : subscribeStore,
             destroy,
             reset,
             getInitialState,
@@ -186,10 +186,258 @@
             }
         }
 
-        // Registrar store
-        storesRegistry.set(name, api);
+        // ====================================
+        // PROXY PARA API STATE-FIRST
+        // ====================================
+        // El Proxy permite acceder directamente a métodos y propiedades del estado
+        // sin tener que usar getState(), mientras mantiene los métodos administrativos
+        // Las propiedades del estado se convierten en objetos reactivos compatibles con useEffect
 
-        return api;
+        // Cache de objetos reactivos por propiedad
+        const reactiveProps = new Map();
+
+        // Función para crear un objeto reactivo para una propiedad del estado
+        function createReactiveProp(propName) {
+            if (reactiveProps.has(propName)) {
+                return reactiveProps.get(propName);
+            }
+
+            const subscribers = new Set();
+            
+            // Función helper para obtener el valor actual
+            function getCurrentValue() {
+                return state && typeof state === 'object' && propName in state 
+                    ? state[propName] 
+                    : undefined;
+            }
+            
+            // Objeto base con métodos especiales
+            const reactiveBase = {
+                get current() {
+                    return getCurrentValue();
+                },
+                
+                subscribe(callback) {
+                    subscribers.add(callback);
+                    // También suscribirse a cambios del store completo
+                    const storeUnsub = subscribeStore((newState, previousState) => {
+                        // Obtener el valor anterior y nuevo de esta propiedad
+                        const prevValue = previousState && typeof previousState === 'object' && propName in previousState
+                            ? previousState[propName]
+                            : undefined;
+                        const newValue = newState && typeof newState === 'object' && propName in newState
+                            ? newState[propName]
+                            : undefined;
+                        
+                        // Notificar solo si esta propiedad específica cambió
+                        if (!Object.is(prevValue, newValue)) {
+                            try {
+                                callback(newValue);
+                            } catch (error) {
+                                console.error(`[SerJSStore] Error en callback de suscripción para "${propName}":`, error);
+                            }
+                        }
+                    });
+                    
+                    return () => {
+                        subscribers.delete(callback);
+                        if (storeUnsub && typeof storeUnsub === 'function') {
+                            storeUnsub();
+                        }
+                    };
+                },
+                
+                // ID interno para identificar la propiedad
+                _propName: propName
+            };
+
+            // Crear un Proxy que envuelva el valor actual y delegue todas las operaciones
+            const reactiveProxy = new Proxy(reactiveBase, {
+                get(target, prop) {
+                    // Si es una propiedad especial del objeto reactivo, retornarla
+                    if (prop === 'current' || prop === 'subscribe' || prop === '_propName') {
+                        return target[prop];
+                    }
+                    
+                    // Obtener el valor actual
+                    const currentValue = getCurrentValue();
+                    
+                    // Si el valor es null o undefined, retornar undefined
+                    if (currentValue == null) {
+                        return undefined;
+                    }
+                    
+                    // Si es un objeto/array, delegar al valor actual
+                    if (typeof currentValue === 'object') {
+                        const value = currentValue[prop];
+                        // Si es una función, bindearla al contexto del valor original
+                        if (typeof value === 'function') {
+                            return value.bind(currentValue);
+                        }
+                        return value;
+                    }
+                    
+                    // Para primitivos, retornar undefined (no tienen propiedades)
+                    return undefined;
+                },
+                
+                set(target, prop, value) {
+                    // No permitir modificar directamente, debe hacerse a través del store
+                    console.warn(`[SerJSStore] No se puede modificar directamente la propiedad "${propName}". Usa los métodos del store para actualizar el estado.`);
+                    return false;
+                },
+                
+                has(target, prop) {
+                    // Verificar si existe en el objeto base o en el valor actual
+                    if (prop === 'current' || prop === 'subscribe' || prop === '_propName') {
+                        return true;
+                    }
+                    
+                    const currentValue = getCurrentValue();
+                    if (currentValue != null && typeof currentValue === 'object') {
+                        return prop in currentValue;
+                    }
+                    
+                    return false;
+                },
+                
+                ownKeys(target) {
+                    const currentValue = getCurrentValue();
+                    const baseKeys = ['current', 'subscribe', '_propName'];
+                    
+                    if (currentValue != null && typeof currentValue === 'object') {
+                        if (Array.isArray(currentValue)) {
+                            // Para arrays, retornar índices y métodos especiales
+                            return [...baseKeys, ...Object.keys(currentValue), 'length'];
+                        }
+                        return [...baseKeys, ...Object.keys(currentValue)];
+                    }
+                    
+                    return baseKeys;
+                },
+                
+                getOwnPropertyDescriptor(target, prop) {
+                    if (prop === 'current' || prop === 'subscribe' || prop === '_propName') {
+                        return Object.getOwnPropertyDescriptor(target, prop);
+                    }
+                    
+                    const currentValue = getCurrentValue();
+                    if (currentValue != null && typeof currentValue === 'object' && prop in currentValue) {
+                        return Object.getOwnPropertyDescriptor(currentValue, prop);
+                    }
+                    
+                    return undefined;
+                },
+                
+                // Conversión a primitivo - permite usar el objeto directamente como valor
+                [Symbol.toPrimitive](hint) {
+                    const val = getCurrentValue();
+                    if (hint === 'number') return Number(val);
+                    if (hint === 'string') return String(val);
+                    return val;
+                },
+                
+                // Para iteración (arrays)
+                [Symbol.iterator]() {
+                    const currentValue = getCurrentValue();
+                    if (Array.isArray(currentValue)) {
+                        return currentValue[Symbol.iterator]();
+                    }
+                    if (currentValue != null && typeof currentValue[Symbol.iterator] === 'function') {
+                        return currentValue[Symbol.iterator]();
+                    }
+                    // Si no es iterable, retornar un iterador vacío
+                    return [][Symbol.iterator]();
+                },
+                
+                // Para JSON.stringify
+                toJSON() {
+                    return getCurrentValue();
+                },
+                
+                valueOf() {
+                    return getCurrentValue();
+                },
+                
+                toString() {
+                    return String(getCurrentValue());
+                }
+            });
+
+            reactiveProps.set(propName, reactiveProxy);
+            return reactiveProxy;
+        }
+
+        const storeProxy = new Proxy(api, {
+            get(target, prop) {
+                // Primero intentar métodos administrativos
+                if (prop in target) {
+                    const value = target[prop];
+                    // Si es una función, bindearla al contexto correcto
+                    if (typeof value === 'function') {
+                        return value.bind(target);
+                    }
+                    return value;
+                }
+                
+                // Si no es un método administrativo, delegar al estado actual
+                if (state && typeof state === 'object' && prop in state) {
+                    const value = state[prop];
+                    
+                    // Si es una función del estado, retornarla directamente
+                    if (typeof value === 'function') {
+                        return value;
+                    }
+                    
+                    // Si es una propiedad del estado, retornar objeto reactivo
+                    // Esto permite usar propiedades del store como dependencias en useEffect
+                    return createReactiveProp(prop);
+                }
+                
+                // Si no se encuentra, devolver undefined
+                return undefined;
+            },
+            
+            set(target, prop, value) {
+                // Permitir modificar propiedades del estado directamente
+                if (state && typeof state === 'object' && prop in state) {
+                    set({ [prop]: value });
+                    return true;
+                }
+                
+                // Permitir modificar métodos administrativos (aunque no es recomendado)
+                target[prop] = value;
+                return true;
+            },
+            
+            has(target, prop) {
+                // Verificar si existe en métodos administrativos o en el estado
+                return prop in target || (state && typeof state === 'object' && prop in state);
+            },
+            
+            ownKeys(target) {
+                // Combinar keys de métodos administrativos y del estado
+                const adminKeys = Object.keys(target);
+                const stateKeys = state && typeof state === 'object' ? Object.keys(state) : [];
+                return [...new Set([...adminKeys, ...stateKeys])];
+            },
+            
+            getOwnPropertyDescriptor(target, prop) {
+                // Devolver descriptor de métodos administrativos o del estado
+                if (prop in target) {
+                    return Object.getOwnPropertyDescriptor(target, prop);
+                }
+                if (state && typeof state === 'object' && prop in state) {
+                    return Object.getOwnPropertyDescriptor(state, prop);
+                }
+                return undefined;
+            }
+        });
+
+        // Registrar store (usar el proxy en lugar del api directo)
+        storesRegistry.set(name, storeProxy);
+
+        return storeProxy;
     }
 
     // ====================================

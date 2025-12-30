@@ -7,6 +7,7 @@ const { store } = SerJS;
 
 (function (window) {
     'use strict';
+    
     window.useTodoStore = store.create((set, get) => ({
         // Estado inicial
         todos: [],
