@@ -1,4 +1,47 @@
 RewriteEngine On
+
+# Bloquear acceso directo a archivos PHP (excepto index.php)
+<FilesMatch "\.php$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Permitir index.php
+<Files "index.php">
+    <IfModule mod_authz_core.c>
+        Require all granted
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Allow from all
+    </IfModule>
+</Files>
+
+# Bloquear acceso a archivos de configuración y sensibles
+<FilesMatch "\.(env|log|md|yml|yaml|ini|conf)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Bloquear acceso a directorios sensibles
+RewriteRule ^(core|components|vendor|store|\.git|\.env)(/.*)?$ - [F,L]
+
+# Todas las solicitudes pasan por el Router para validación
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]
+
+# También interceptar archivos existentes para validación por el Router
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteCond %{REQUEST_URI} !^/index\.php$
 RewriteRule ^ index.php [QSA,L]

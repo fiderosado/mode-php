@@ -87,6 +87,31 @@ class Resolver
     }
 
     /**
+     * Busca archivos page.css en la ruta de la página y sus directorios padres
+     * Similar a findLayout pero para archivos CSS
+     */
+    public static function findCSS(string $path): ?string
+    {
+        $path = self::normalizePath(realpath($path));
+
+        while ($path && $path !== dirname($path)) {
+
+            if (self::isOmittedPath($path)) {
+                $path = dirname($path);
+                continue;
+            }
+
+            if (file_exists($path . '/page.css')) {
+                return $path . '/page.css';
+            }
+
+            $path = dirname($path);
+        }
+
+        return null;
+    }
+
+    /**
      * Normaliza separadores de ruta
      */
     private static function normalizePath(string $path): string
