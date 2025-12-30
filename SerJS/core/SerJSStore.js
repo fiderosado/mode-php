@@ -25,6 +25,7 @@
     // ====================================
 
     function create(createState, options = {}) {
+        
         const {
             name = `store_${Date.now()}`,
             persist = true,
@@ -34,32 +35,7 @@
             partialize = (state) => state,
             merge = (persistedState, currentState) => ({ ...currentState, ...persistedState })
         } = options;
-/* 
 
- // Estado inicial
-        let state = typeof createState === 'function' 
-            ? createState(set, get, api) 
-            : createState;
-
-        // Cargar estado persistido si existe
-        if (persist && storage) {
-            try {
-                const persistedData = storage.getItem(name);
-                if (persistedData) {
-                    const parsed = JSON.parse(persistedData);
-                    
-                    // Verificar versión y migrar si es necesario
-                    if (parsed.version !== version) {
-                        state = migrate(parsed.state || parsed);
-                    } else {
-                        state = merge(parsed.state || parsed, state);
-                    }
-                }
-            } catch (error) {
-                console.error(`[SerJSStore] Error loading persisted state for "${name}":`, error);
-            }
-        }
-            */
         // Definir estado (inicialmente undefined)
         let state;
         const listeners = new Set();
@@ -103,7 +79,7 @@
 
         function subscribe(listener) {
             listeners.add(listener);
-            // Retornar función de cleanup
+
             return () => {
                 listeners.delete(listener);
             };

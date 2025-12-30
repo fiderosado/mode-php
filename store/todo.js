@@ -71,4 +71,13 @@ const { store } = SerJS;
         return instance;
     });
 
+    if (typeof window !== "undefined") {
+        window.addEventListener("storage", (event) => {
+            if (event.key === "todo-list-app") {
+                useTodoStore.setState(JSON.parse(event.newValue || "{}").state);
+            }
+        });
+    }    
+
 })(window);
+

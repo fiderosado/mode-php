@@ -364,9 +364,7 @@
         // ====================================
         // DESTRUCTURAR SERJS
         // ====================================
-        const { useRef, useState, useEffect, setText, setHTML, importModule , getModuleCache } = SerJS;
-
-        console.log("SerJS Cache Modules", getModuleCache());
+        const { useRef, useState, useEffect, setText, setHTML, importModule } = SerJS;
 
         // ====================================
         // IMPORTAR EL STORE
@@ -374,6 +372,8 @@
 
         const useTodoStore = await importModule('useTodoStore','../../store/todo.js');
         useTodoStore.subscribe(()=>renderTodoList());
+
+        console.log("todo store:", useTodoStore.getState().todos );
 
         // ====================================
         // REFERENCIAS A ELEMENTOS
