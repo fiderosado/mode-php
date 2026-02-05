@@ -2,9 +2,10 @@
 
 namespace Core;
 
+use Core\Utils\Console;
+
 class Resolver
 {
-
     /**
      * Rutas (relativas al proyecto) donde NO se debe buscar layout
      */
@@ -23,16 +24,31 @@ class Resolver
         $segment = array_shift($segments);
         $path = "$basePath/$segment";
 
+        // Si existe un directorio exacto, continuar por ahí
         if (is_dir($path)) {
             return self::resolve($segments, $path, $params);
         }
 
-        foreach (glob("$basePath/[[]*[]]") as $dir) {
-            $key = trim(basename($dir), '[]');
-            $params[$key] = $segment;
-            return self::resolve($segments, $dir, $params);
+        foreach (glob("$basePath/*") as $dir) {
+            if (!is_dir($dir)) continue;
+            $basename = basename($dir);
+            // [slug] dinámico simple (EXCLUSIVO)
+            if (preg_match('/^\[(?!\.\.\.)[^\[\]]+\]$/', $basename)) {
+                $key = trim($basename, '[]');
+                $params[$key] = $segment;
+                return self::resolve($segments, $dir, $params);
+            }
         }
 
+        // Buscar patrón [[...variable]] para capturar múltiples segmentos (catch-all)
+        foreach (glob("$basePath/[[...]*[]]") as $dir) {
+            $basename = basename($dir);
+            if (preg_match('/^\[\[\.\.\.(.+)\]\]$/', $basename, $matches)) {
+                $key = $matches[1];
+                $params[$key] = array_merge([$segment], $segments);
+                return self::resolve([], $dir, $params);
+            }
+        }
         return null;
     }
 
