@@ -1,7 +1,6 @@
 <?php
 
 use Core\Utils\Console;
-
 use function Core\Url\searchParams;
 
 $searchParams = searchParams();

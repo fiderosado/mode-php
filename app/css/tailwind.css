@@ -170,6 +170,9 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 [hidden]:where(:not([hidden='until-found'])) {
   display: none !important;
 }
+.mt-4 {
+  margin-top: calc(var(--spacing) * 4);
+}
 .\!flex {
   display: flex !important;
 }
@@ -196,6 +199,9 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 }
 .rounded-xl {
   border-radius: var(--radius-xl);
+}
+.p-2 {
+  padding: calc(var(--spacing) * 2);
 }
 .p-4 {
   padding: calc(var(--spacing) * 4);

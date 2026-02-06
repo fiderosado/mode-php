@@ -342,6 +342,27 @@
                 });
             }
 
+            if (prop === 'Actions') {
+                return async (...args) => {
+
+                    if (!window.SerJSActions) {
+                        await loadSerJSModule(
+                            'SerJSActions',
+                            '../../SerJS/core/SerJSActions.js'
+                        );
+                    }
+            
+                    if (typeof window.SerJSActions !== 'function') {
+                        throw new Error('SerJSActions no es una función');
+                    }
+
+                   // console.log("window.SerJSActions", window.SerJSActions);
+            
+                    return window.SerJSActions(...args);
+                };
+            }
+            
+
             if (prop === 'store') {
                 // Crear un proxy que intercepte el acceso al método create
                 return new Proxy({}, {

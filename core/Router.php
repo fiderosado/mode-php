@@ -2,6 +2,11 @@
 
 namespace Core;
 
+use Core\Http\Action;
+use Core\Http\CSRF;
+use Core\Http\HttpResponse;
+use Core\Http\Redirect;
+use Core\Http\Security;
 use core\Resolver;
 
 class Router
@@ -29,7 +34,113 @@ class Router
             'params' => $params
         ]);
 
+        // Cargar actions.php si existe
+        $actionsPath = dirname($page) . '/actions.php';
+        if (file_exists($actionsPath)) {
+            // Registrar la ruta actual para scope de acciones
+            Action::setCurrentPath($page);
+            require_once $actionsPath;
+        }
+
+        // NUEVO: Interceptar Server Actions
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['__action'])) {
+
+            /* ob_clean(); // elimina cualquier salida previa
+
+            header('Content-Type: application/json; charset=utf-8');
+            $arr = [
+                "params"=> $params,
+                "__action"=> $_GET['__action'],
+                "page"=> $page,
+                "POST"=> $_POST,
+                "GET"=> $_GET,
+            ];
+
+            echo json_encode($arr);
+            exit; */
+
+            $token = $_POST['_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
+
+            self::handleAction($_GET['__action'], $token, $params, $page);
+            return; // Terminar aquí, no renderizar la página
+        }
+
         self::render($page);
+    }
+
+    // Método para manejar Server Actions con seguridad
+    protected static function handleAction(string $actionName, string $actionToken, array $params, string $pagePath)
+    {
+        try {
+            session_start();
+            // Limpiar cualquier salida previa (como <script> de Console::log)
+            /* ob_clean(); // elimina cualquier salida previa
+
+            header('Content-Type: application/json; charset=utf-8');
+
+            $arr = [
+                "actionName" => $actionName,
+                "actionToken" => $actionToken,
+                "params" => $params,
+                "pagePath" => $pagePath,// "D:\\GitHub\\mode-php/app/example/actions/page.php"
+                "isValidToken" => CSRF::verify($actionToken),
+                "actualToken" => $_SESSION['csrf_token']
+            ];
+
+            echo json_encode($arr);
+            exit; */
+
+            // VERIFICAR CSRF TOKEN
+
+            if (!CSRF::verify($actionToken)) {
+                self::actionError('Invalid CSRF token', 403);
+                return;
+            }
+
+            // VERIFICAR ORIGIN (mismo dominio)
+            if (!Security::verifyOrigin()) {
+                self::actionError('Invalid origin', 403);
+                return;
+            }
+
+            // RATE LIMITING
+            $rateLimitKey = ($_SERVER['REMOTE_ADDR'] ?? 'unknown') . ':' . $actionName;
+            if (!RateLimit::check($rateLimitKey, 20, 1)) {
+                self::actionError('Too many requests', 429);
+                return;
+            }
+
+            // OBTENER DATOS DEL REQUEST
+            $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+            if (str_contains($contentType, 'application/json')) {
+                $data = json_decode(file_get_contents('php://input'), true) ?? [];
+            } else {
+                $data = $_POST;
+            }
+
+            // EJECUTAR LA ACCIÓN (verifica scope automáticamente)
+            $result = Action::execute($actionName, $data, $params, $pagePath);
+
+            // MANEJAR RESPUESTA
+            if ($result instanceof Redirect) {
+                $result->execute();
+                exit;
+            }
+
+            // Retornar JSON
+            header('Content-Type: application/json');
+            echo json_encode($result);
+            exit;
+        } catch (\Exception $e) {
+            self::actionError($e->getMessage(), 403);
+        }
+    }
+
+    // Helper para errores de acciones
+    protected static function actionError(string $message, int $code = 400)
+    {
+        HttpResponse::json(['error' => $message],['status'=>$code]);
+        exit;
     }
 
     protected static function render($page)
@@ -60,17 +171,17 @@ class Router
     {
         $projectRoot = realpath(dirname(__DIR__));
         $normalizedFilePath = realpath($filePath);
-        
+
         // Normalizar ambos paths usando forward slashes
         $projectRoot = str_replace('\\', '/', $projectRoot);
         $normalizedFilePath = str_replace('\\', '/', $normalizedFilePath);
-        
+
         // Obtener la ruta relativa
         $relativePath = str_replace($projectRoot, '', $normalizedFilePath);
-        
+
         // Limpiar y normalizar la ruta
         $relativePath = ltrim($relativePath, '/');
-        
+
         return '/' . $relativePath;
     }
     protected static function notFound()
@@ -88,5 +199,4 @@ class Router
             echo '404';
         }
     }
-
 }

@@ -7,6 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Test SerJSStore - Lista de Tareas</title>
+    
     <?php if (isset($GLOBALS['css']) && $GLOBALS['css']): ?>
     <link rel="stylesheet" href="<?php echo htmlspecialchars($GLOBALS['css']); ?>">
     <?php endif; ?>
