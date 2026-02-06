@@ -18,7 +18,7 @@ use Core\Http\CSRF;
 </head>
 
 <body>
-    <div class="container">
+    <div class="container mx-auto max-w-md">
         <h1>🚀 Server Actions Example</h1>
         <p>Prueba las diferentes acciones del servidor usando botones. Similar a React Server Actions.</p>
 
