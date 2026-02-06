@@ -32,7 +32,6 @@
 
         console.log(params.slug); // "mi-post"
 
-
     </script>
     <button onclick="push('/test-js')">Test JS</button>
     <button onclick="push('/test-nav')">Test Nav</button>

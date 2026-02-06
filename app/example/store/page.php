@@ -16,7 +16,7 @@
     <script src="../../SerJS/SerJS.js"></script>
 </head>
 <body>
-    <div class="container">
+    <div class="container mx-auto max-w-md">
         <h1>📝 Lista de Tareas</h1>
         <p class="subtitle">Ejemplo de SerJSStore con persistencia + importModule</p>
 
