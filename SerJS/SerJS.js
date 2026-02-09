@@ -391,11 +391,11 @@
 
             // Método para importar módulos dinámicamente
             if (prop === 'importModule') return async (moduleName, modulePath) => {
-                const normalizedPath = modulePath.startsWith('./') || modulePath.startsWith('../') ? modulePath : `./${modulePath}`;
+                //const normalizedPath = modulePath.startsWith('./') || modulePath.startsWith('../') ? modulePath : `./${modulePath}`;
                 if (!window[moduleName]) {
                     await loadSerJSModule(
                         moduleName,
-                        `${$BASE_URL}${normalizedPath}`
+                        `${$BASE_URL}${modulePath}`
                     );
                 }
                 return new Proxy(window[moduleName], {

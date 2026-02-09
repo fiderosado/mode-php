@@ -1,20 +1,23 @@
 <?php
- // crear un metodo para llamar desde la ruta actual e imortar los ficheros desde aca
+// crear un metodo para llamar desde la ruta actual e imortar los ficheros desde aca
+$baseUrl = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'];
 ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Test SerJSStore - Lista de Tareas</title>
-    
+
     <?php if (isset($GLOBALS['css']) && $GLOBALS['css']): ?>
-    <link rel="stylesheet" href="<?php echo htmlspecialchars($GLOBALS['css']); ?>">
+        <link rel="stylesheet" href="<?php echo htmlspecialchars($GLOBALS['css']); ?>">
     <?php endif; ?>
 
     <!-- Incluir SerJS -->
-    <script src="../../SerJS/SerJS.js"></script>
+    <script src="<?php echo $baseUrl; ?>/SerJS/SerJS.js"></script>
 </head>
+
 <body>
     <div class="container mx-auto max-w-md">
         <h1>📝 Lista de Tareas</h1>
@@ -38,12 +41,11 @@
 
         <!-- Input para agregar tareas -->
         <div class="input-group">
-            <input 
-                type="text" 
-                id="todo-input" 
+            <input
+                type="text"
+                id="todo-input"
                 placeholder="Escribe una nueva tarea..."
-                autocomplete="off"
-            >
+                autocomplete="off">
             <button id="add-btn">Agregar</button>
         </div>
 
@@ -84,13 +86,31 @@
         // ====================================
         // DESTRUCTURAR SERJS
         // ====================================
-        const { useRef, useState, useEffect, setText, setHTML, importModule } = SerJS;
+        const {
+            useRef,
+            useState,
+            useEffect,
+            setText,
+            setHTML,
+            importModule
+        } = SerJS;
 
         // ====================================
         // IMPORTAR EL STORE
         // ====================================
 
-        const {subscribe , todos , addTodo , toggleTodo , deleteTodo , clearCompleted , getFilteredTodos , getStats , setFilter , filter} = await importModule('useTodoStore','../../store/todo.js');
+        const {
+            subscribe,
+            todos,
+            addTodo,
+            toggleTodo,
+            deleteTodo,
+            clearCompleted,
+            getFilteredTodos,
+            getStats,
+            setFilter,
+            filter
+        } = await importModule('useTodoStore', `/store/todo.js`);
 
         // ====================================
         // REFERENCIAS A ELEMENTOS
@@ -129,14 +149,17 @@
             if (minutes < 60) return `Hace ${minutes}m`;
             if (hours < 24) return `Hace ${hours}h`;
             if (days < 7) return `Hace ${days}d`;
-            
-            return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+
+            return date.toLocaleDateString('es-ES', {
+                day: 'numeric',
+                month: 'short'
+            });
         }
 
         // ====================================
         // FUNCIONES DE EVENTOS
         // ====================================
-        
+
 
         function deleteTodoAction(id) {
             if (confirm('¿Estás seguro de eliminar esta tarea?')) {
@@ -170,12 +193,12 @@
 
             const filteredTodos = getFilteredTodos();
             const stats = getStats();
-            
+
             // Actualizar estadísticas usando setText de SerJS
             setText(totalCountRef, stats.total);
             setText(activeCountRef, stats.active);
             setText(completedCountRef, stats.completed);
-            
+
             // Renderizar lista de tareas
             if (filteredTodos.length === 0) {
                 if (todoListRef.current) todoListRef.current.style.display = 'none';
@@ -183,7 +206,7 @@
             } else {
                 if (todoListRef.current) todoListRef.current.style.display = 'block';
                 if (emptyStateRef.current) emptyStateRef.current.style.display = 'none';
-                
+
                 const todosHtml = filteredTodos.map(todo => `
                 <li class="todo-item ${todo.completed ? 'completed' : ''}" data-id="${todo.id}">
                         <input 
@@ -198,14 +221,14 @@
                         </button>
                 </li>
                 `).join('');
-                
+
                 setHTML(todoListRef, todosHtml);
             }
-            
+
             // Debug panel
 
             const debugData = {
-                filter: filter, 
+                filter: filter,
                 totalTodos: todos.length,
                 todos: todos.map(t => ({
                     id: t.id,
@@ -219,7 +242,7 @@
         // ====================================
         // EVENTOS CON SERJS
         // ====================================
-        
+
         // Botón agregar
         addBtnRef.onClick(() => {
             if (todoInputRef.current) {
@@ -260,7 +283,7 @@
                     toggleTodo(id);
                 }
             }
-            
+
             // Manejar click en botón eliminar
             if (e.target.classList.contains('delete-btn') || e.target.closest('.delete-btn')) {
                 const todoItem = e.target.closest('.todo-item');
@@ -282,10 +305,10 @@
         }, []);
 
         useEffect(() => {
-            console.log("todos store:", todos.current );
+            console.log("todos store:", todos.current);
             renderTodoList()
-        }, [todos , filter]);
-
+        }, [todos, filter]);
     </script>
 </body>
+
 </html>

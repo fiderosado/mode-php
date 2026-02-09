@@ -1,8 +1,8 @@
 <?php
 
-use Core\Suspense;
 use Core\Html\Elements\Div;
-use Core\Action;
+use Core\Html\Suspense;
+use Core\SuspenseAction;
 use Core\Utils\Console;
 
 ?>
@@ -10,9 +10,6 @@ use Core\Utils\Console;
 <html lang="es">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suspense - Ejemplo Simple Reconstruido</title>
     <?php if (isset($GLOBALS['css']) && $GLOBALS['css']): ?>
         <link rel="stylesheet" href="<?= htmlspecialchars($GLOBALS['css']); ?>">
     <?php endif; ?>
@@ -34,8 +31,8 @@ use Core\Utils\Console;
                 Div::in(
                     "loading....."
                 )->class("p-4 bg-red-500"),
-                Action::in("hola-mundo",["userId"=>123])
-            )->build();
+                SuspenseAction::in("hola-mundo",["userId"=>123])
+            )->render();
             ?>
         </div>
 </body>
