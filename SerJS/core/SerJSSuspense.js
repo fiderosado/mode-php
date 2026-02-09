@@ -123,8 +123,18 @@
             }
         }
 
-        action(actionName) {
-            return this.registry.get(actionName) || null;
+        action(targetIdOrActionName) {
+            // Primero intentar buscar por targetId
+            if (this.registry.has(targetIdOrActionName)) {
+                return this.registry.get(targetIdOrActionName);
+            }
+            // Si no existe, buscar por actionName
+            for (const [, instance] of this.registry) {
+                if (instance.actionName === targetIdOrActionName) {
+                    return instance;
+                }
+            }
+            return null;
         }
 
         has(actionName) {
