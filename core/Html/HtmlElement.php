@@ -5,85 +5,66 @@ namespace Core\Html;
 use Core\IdGenerator;
 use Core\File;
 
-abstract class HtmlElement {
-    
+abstract class HtmlElement
+{
     const off = 0;
-    protected $style=null;
-    protected $id;
-    protected $class;
-    protected $resp;
-    protected $dataId;
-    protected static $counter = 0;
-    protected $cssContent =null; 
-    public static $instance;
-    
-    /**
-     * Devuelve el nombre de la etiqueta HTML (debe ser implementado por las clases hijas)
-     */
-    abstract protected function getTagName();
-    
-    /**
-     * Método estático para crear instancias de forma fluida
-     */
-    public static function in() {
-        $className = get_called_class();
-        self::$instance = new $className(func_get_args());
-        return self::$instance;
-    }
-    
-    public function __construct() {
-          // Generar ID único automáticamente
-          $this->generateDataId();
 
-        $args = func_get_args()[0] ?? [];
-        $c = array();
-        
-        for($i = self::off; $i < count($args); ++$i) {
-            if (is_object($args[$i])) {
-                array_push($c, $args[$i]->build());
-            } elseif (is_string($args[$i])) {
-                array_push($c, $args[$i]);
+    protected ?string $style = null;
+    protected ?string $id = null;
+    protected ?string $class = null;
+    protected string $resp = '';
+    protected string $dataId;
+    protected static int $counter = 0;
+    protected $cssContent = null;
+
+    /**
+     * Cada elemento debe definir su tag
+     */
+    abstract protected function getTagName(): string;
+
+    /**
+     * Factory fluido moderno
+     */
+    public static function in(...$children): static
+    {
+        return new static(...$children);
+    }
+
+    /**
+     * Constructor moderno compatible con herencia
+     */
+    public function __construct(...$children)
+    {
+        $this->generateDataId();
+        $this->resp = $this->buildChildren($children);
+    }
+
+    /**
+     * Procesa los children de forma robusta
+     */
+    protected function buildChildren(array $children): string
+    {
+        $output = [];
+
+        foreach ($children as $child) {
+
+            if (is_object($child) && method_exists($child, 'build')) {
+                $output[] = $child->build();
+            } elseif (is_string($child) || is_numeric($child)) {
+                $output[] = (string) $child;
+            } elseif (is_array($child)) {
+                $output[] = $this->buildChildren($child);
             }
         }
-        
-        $this->resp = implode('', $c);
+
+        return implode('', $output);
     }
 
-       /**
-     * Obtiene la ruta del archivo de la clase actual
-     */
-    protected function getClassPath() {
-        $reflection = new \ReflectionClass(get_class($this));
-        return $reflection->getFileName();
-    }
-    
     /**
-     * Obtiene el directorio donde está ubicada la clase actual
+     * Genera data-id único
      */
-    protected function getClassDirectory() {
-        $classPath = $this->getClassPath();
-        return dirname($classPath);
-    }
-    
-    /**
-     * Obtiene el nombre de la clase sin namespace
-     */
-    protected function getClassName() {
-        $reflection = new \ReflectionClass(get_class($this));
-        return $reflection->getShortName();
-    }
-    
-    /**
-     * Obtiene el namespace completo de la clase
-     */
-    protected function getClassNamespace() {
-        return get_class($this);
-    }
-    
-     /**
-     * Genera un ID único para el elemento
-     */
-    protected function generateDataId() {
+    protected function generateDataId(): void
+    {
         $tagName = $this->getTagName();
         $this->dataId = IdGenerator::generate($tagName);
     }
@@ -91,146 +72,155 @@ abstract class HtmlElement {
     /**
      * Permite establecer un data-id personalizado
      */
-    public function setDataId($dataId) {
+    public function setDataId(string $dataId): static
+    {
         if (IdGenerator::isIdUsed($dataId)) {
+
             $counter = 1;
             $newDataId = $dataId . '-' . $counter;
-            
+
             while (IdGenerator::isIdUsed($newDataId)) {
                 $counter++;
                 $newDataId = $dataId . '-' . $counter;
             }
-            
+
             $dataId = $newDataId;
         }
-        
+
         IdGenerator::registerUsedId($dataId);
         $this->dataId = $dataId;
-        
+
         return $this;
     }
-    
-    /**
-     * Obtiene el data-id del elemento
-     */
-    public function getDataId() {
+
+    public function getDataId(): string
+    {
         return $this->dataId;
     }
 
-    /**
-     * Obtiene el atributo data-id
-     */
-    protected function getDataIdAttribute() {
+    protected function getDataIdAttribute(): string
+    {
         return ' data-id="' . $this->dataId . '"';
     }
 
-    public function setId($id) {
+    public function setId(string $id): static
+    {
         $this->id = $id;
         return $this;
     }
-    
-    public function setStyle($s) {
-        if (is_array($s)) {
-            foreach ($s as $k => $v) {
-                $this->style .= $k . ':' . $v . ';';
-            }
-        }
-        // si es un objeto
-        if (is_object($s)) {
-            foreach ($s as $k => $v) {
-                $this->style .= $k . ':' . $v . ';';
-            }
-        }
-        return $this;
-    }
-    
-    public function class($class) {
+
+    public function class(string|array $class): static
+    {
         if (is_array($class)) {
             $this->class = implode(' ', $class);
-        } elseif (is_string($class)) {
+        } else {
             $this->class = $class;
         }
+
         return $this;
     }
-    
-    protected function getId() {
-        return (empty($this->id)) ? '' : ' id="' . $this->id . '"';
+
+    public function setStyle(array|object $styles): static
+    {
+        if (is_array($styles) || is_object($styles)) {
+            foreach ($styles as $k => $v) {
+                $this->style .= $k . ':' . $v . ';';
+            }
+        }
+
+        return $this;
     }
-    
-    protected function getClass() {
-        return (empty($this->class)) ? '' : ' class="' . $this->class . '"';
+
+    protected function getId(): string
+    {
+        return empty($this->id) ? '' : ' id="' . $this->id . '"';
     }
-    
-    protected function getStyle() {
-        return (empty($this->style)) ? '' : ' style="' . $this->style . '"';
+
+    protected function getClass(): string
+    {
+        return empty($this->class) ? '' : ' class="' . $this->class . '"';
     }
-    
-    /**
-     * Obtiene todos los atributos concatenados
-     */
-    protected function getAttributes() {
-        return $this->getDataIdAttribute() . $this->getId() . $this->getClass() . $this->getStyle();
+
+    protected function getStyle(): string
+    {
+        return empty($this->style) ? '' : ' style="' . $this->style . '"';
+    }
+
+    protected function getAttributes(): string
+    {
+        return $this->getDataIdAttribute()
+            . $this->getId()
+            . $this->getClass()
+            . $this->getStyle();
     }
 
     /**
-     * Construye la ruta del archivo CSS basado en la ubicación de la clase
+     * CSS automático por clase
      */
-    protected function buildCssPath() {
-        // Obtener el directorio de la clase
-        $classDir = $this->getClassDirectory();
-        
-        // Obtener el nombre de la clase (sin namespace)
-        $className = $this->getClassName();
-        
-        // Construir la ruta del archivo CSS
-        // Asume que el CSS está en el mismo directorio con el mismo nombre
-        $cssPath = $classDir . DIRECTORY_SEPARATOR . $className . '.css';
-        
-        return $cssPath;
+    protected function getClassPath(): string
+    {
+        $reflection = new \ReflectionClass(static::class);
+        return $reflection->getFileName();
     }
 
-    /**
-     * Carga el archivo CSS asociado a la clase del elemento
-     */
-    protected function loadCss() {
-        // Solo intentar cargar una vez
+    protected function getClassDirectory(): string
+    {
+        return dirname($this->getClassPath());
+    }
+
+    protected function getClassName(): string
+    {
+        $reflection = new \ReflectionClass(static::class);
+        return $reflection->getShortName();
+    }
+
+    protected function buildCssPath(): string
+    {
+        return $this->getClassDirectory()
+            . DIRECTORY_SEPARATOR
+            . $this->getClassName()
+            . '.css';
+    }
+
+    protected function loadCss(): void
+    {
         if ($this->cssContent !== null) {
             return;
         }
-        
-        // Construir la ruta del CSS
+
         $cssPath = $this->buildCssPath();
-        
-        // Intentar cargar el archivo CSS directamente
-        $cssContent = File::loadFile($cssPath, 'css');
-        
-        // Guardar el resultado (puede ser string con CSS o false)
-        $this->cssContent = $cssContent;
+        $this->cssContent = File::loadFile($cssPath, 'css');
     }
-    /**
-     * Obtiene el tag <style> con el CSS cargado
-     */
-    protected function getCssTag() {
-        // Cargar CSS si no se ha intentado antes
+
+    protected function getCssTag(): string
+    {
         if ($this->cssContent === null) {
             $this->loadCss();
         }
-        
-        // Si hay contenido CSS válido, retornar el tag <style>
+
         if ($this->cssContent !== false && !empty($this->cssContent)) {
             return '<style>' . $this->cssContent . '</style>';
         }
-        
+
         return '';
     }
+
+    public function render(): void
+    {
+        echo $this->build();
+    }
+
     /**
-     * Construye el elemento HTML completo
+     * Render final
      */
-    public function build() {
+    public function build(): string
+    {
         $tag = $this->getTagName();
         $cssTag = $this->getCssTag();
-        return  $cssTag . '<' . $tag . $this->getAttributes() . '>' . $this->resp . '</' . $tag . '>';
+
+        return $cssTag
+            . '<' . $tag . $this->getAttributes() . '>'
+            . $this->resp
+            . '</' . $tag . '>';
     }
 }
-
-?>

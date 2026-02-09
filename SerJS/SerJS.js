@@ -366,31 +366,17 @@
         isReady = true;
         queue.forEach(fn => fn());
         queue.length = 0;
-    });
 
-    document.addEventListener("DOMContentLoaded", async () => {
-
-        const nodes = document.querySelectorAll("[data-suspense]");
-
-        window.__SerActions__ ??= {};
-
-        await Promise.all([...nodes].map(async (el) => {
-
-            const hash = el.dataset.suspense;
-            const actionName = el.dataset.action;
-            const target = el.dataset.target;
-
-            if (!window.__SerActions__[hash]) {
-                window.__SerActions__[hash] = await SerJS.Actions(hash);
+        // Inicializar módulo Suspense
+        (async () => {
+            if (!window.SerJSSuspense) {
+                await loadSerJSModule(
+                    'SerJSSuspense',
+                    `${$BASE_URL}/SerJS/core/SerJSSuspense.js`
+                );
             }
-
-            const response = await window.__SerActions__[hash].call(actionName);
-
-            SerJS.replaceHTML(
-                SerJS.useRef(target),
-                response ?? "Error en la accion.."
-            );
-        }));
+            await window.SerJSSuspense.registerAll();
+        })();
     });
 
 
@@ -443,7 +429,6 @@
                     }
                 });
             }
-
             if (prop === 'Actions') {
                 return async (...args) => {
 
@@ -463,8 +448,6 @@
                     return window.SerJSActions(...args);
                 };
             }
-
-
             if (prop === 'store') {
                 // Crear un proxy que intercepte el acceso al método create
                 return new Proxy({}, {
@@ -482,6 +465,29 @@
                                 return window.SerJSStore[method](...args);
                             }
                             throw new Error(`SerJSStore.${method} no es una función`);
+                        };
+                    }
+                });
+            }
+
+            if (prop === 'suspense') {
+                return new Proxy({}, {
+                    get(target, method) {
+                        return async (...args) => {
+                            // Cargar módulo SerJSSuspense si no existe
+                            if (!window.SerJSSuspense) {
+                                await loadSerJSModule(
+                                    'SerJSSuspense',
+                                    `${$BASE_URL}/SerJS/core/SerJSSuspense.js`
+                                );
+                                await window.SerJSSuspense.registerAll();
+                            }
+                            const instance = window.SerJSSuspense;
+                            // Validar si el método existe
+                            if (typeof instance[method] === 'function') {
+                                return instance[method](...args);
+                            }
+                            throw new Error(`SerJSSuspense.${method} no es una función`);
                         };
                     }
                 });
