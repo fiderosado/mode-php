@@ -8,8 +8,6 @@
      */
     function createActions(csrfToken) {
 
-
-
         async function call(name, data = {}) {
             const formData = new FormData();
 

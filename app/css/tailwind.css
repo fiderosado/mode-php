@@ -24,6 +24,7 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   --color-red-500: oklch(63.7% .237 25.331);
   --color-green-500: oklch(72.3% .219 149.579);
+  --color-indigo-500: oklch(58.5% .233 277.117);
   --color-white: #fff;
   --spacing: .25rem;
   --container-md: 28rem;
@@ -211,6 +212,9 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 }
 .bg-green-500 {
   background-color: var(--color-green-500);
+}
+.bg-indigo-500 {
+  background-color: var(--color-indigo-500);
 }
 .bg-red-500 {
   background-color: var(--color-red-500);

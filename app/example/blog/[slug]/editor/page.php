@@ -14,15 +14,23 @@ $query = $searchParams->query;
 //var_dump($searchParams);
 ?>
 <html lang="en">
-    <!-- <script>
+<!-- <script>
         SerJS.add("app-head","<title>este es mi titulo</title>");
     </script> -->
-    <div id="editor">esto es un editor para el post con slug: <?php echo $slug; ?></div>
-    <!-- meter un suspense para el editor -->
-    <?php
-    Suspense::in(
-        Div::in("editor"),
-        SuspenseAction::in("editor-suspense")
-    )->build()
-    ?>
+<div id="editor">esto es un editor para el post con slug: <?php echo $slug; ?></div>
+<!-- meter un suspense para el editor -->
+<?php
+
+Suspense::in(
+    Div::in("editor"),
+    SuspenseAction::in("editor-suspense")
+)->build();
+
+Suspense::in(
+    Div::in("preparando un hola"),
+    SuspenseAction::in("hola-suspense")
+)->build();
+
+?>
+
 </html>

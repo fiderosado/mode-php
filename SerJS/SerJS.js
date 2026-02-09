@@ -5,12 +5,6 @@
 
     const $BASE_URL = window.location.origin;
 
-    document.addEventListener('DOMContentLoaded', () => {
-        isReady = true;
-        queue.forEach(fn => fn());
-        queue.length = 0;
-    });
-
     const statesMap = new Map();
     let stateIdCounter = 0;
     const memoStore = new Map();
@@ -367,6 +361,38 @@
     };
 
     function getModuleCache() { return moduleCache.current; }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        isReady = true;
+        queue.forEach(fn => fn());
+        queue.length = 0;
+    });
+
+    document.addEventListener("DOMContentLoaded", async () => {
+
+        const nodes = document.querySelectorAll("[data-suspense]");
+
+        window.__SerActions__ ??= {};
+
+        await Promise.all([...nodes].map(async (el) => {
+
+            const hash = el.dataset.suspense;
+            const actionName = el.dataset.action;
+            const target = el.dataset.target;
+
+            if (!window.__SerActions__[hash]) {
+                window.__SerActions__[hash] = await SerJS.Actions(hash);
+            }
+
+            const response = await window.__SerActions__[hash].call(actionName);
+
+            SerJS.replaceHTML(
+                SerJS.useRef(target),
+                response ?? "Error en la accion.."
+            );
+        }));
+    });
+
 
     window.SerJS = new Proxy(methods, {
         get(target, prop) {
