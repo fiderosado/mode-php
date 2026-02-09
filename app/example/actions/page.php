@@ -54,12 +54,9 @@ use Core\Http\CSRF;
         actionBoton.onClick(toggleFeature);
 
         const toggleFeatureAction = await Actions(`<?= CSRF::token(); ?>`);
-
-        //console.log("toggleFeatureAction", toggleFeatureAction);
-
+        
         async function toggleFeature() {
             const response = await toggleFeatureAction.call('toggleFeature', { enabled: true });
-            console.log("response", response);  
             if (response.success) {
                 setText(toggleMessage,response.success.message);
             }

@@ -3,6 +3,8 @@
     let isReady = false;
     const queue = [];
 
+    const $BASE_URL = window.location.origin;
+
     document.addEventListener('DOMContentLoaded', () => {
         isReady = true;
         queue.forEach(fn => fn());
@@ -187,6 +189,23 @@
         return [];
     }
 
+    function htmlToNode(html) {
+        if (html instanceof Node) return html;
+        if (Array.isArray(html)) {
+            const frag = document.createDocumentFragment();
+            html.forEach(item => {
+                const child = htmlToNode(item);
+                if (child) frag.appendChild(child);
+            });
+            return frag;
+        }
+        const template = document.createElement('template');
+        template.innerHTML = String(html).trim();
+        const content = template.content;
+        if (content.childNodes.length === 1) return content.firstChild;
+        return content;
+    }
+
     const methods = {
         setText(ref, text) {
             resolve(ref).forEach(el => {
@@ -198,6 +217,57 @@
                 el.innerHTML = String(html);
             });
         },
+        replaceHTML(ref, html) {
+            resolve(ref).forEach(el => {
+                const node = htmlToNode(html);
+                if (!node) return;
+                // Preservar referencia para efectos futuros
+                if (ref && typeof ref === 'object') {
+                    ref.current = node;
+                }
+                el.replaceWith(node);
+            });
+        },
+        add(ref, html) {
+            // hay que verificar sies un string construimos un ref sino usamosel que viene
+            const refToUse = typeof ref === 'string' ? useRef(ref) : ref;
+            resolve(refToUse).forEach(el => {
+                const node = htmlToNode(html);
+                if (!node) return;
+
+                // Caso especial: <title>
+                if (node.tagName === "TITLE") {
+                    document.title = node.textContent;
+                    return;
+                }
+
+                // Caso especial: <meta>
+                if (node.tagName === "META") {
+                    const name = node.getAttribute("name");
+                    if (name) {
+                        const existing = document.head.querySelector(`meta[name="${name}"]`);
+                        if (existing) existing.remove();
+                    }
+                    document.head.appendChild(node);
+                    return;
+                }
+
+                // Caso normal
+                el.appendChild(node);
+            });
+        },
+
+        /* replaceHTMl(ref, html) {
+            resolve(ref).forEach(el => {
+                const node = htmlToNode(html);
+                if (!node) return;
+                if (ref && typeof ref === 'object') {
+                    ref.current = node;
+                }
+                el.replaceWith(node);
+            });
+        }, */
+
         reRender(ref, state = {}) {
             resolve(ref).forEach(el => {
 
@@ -264,7 +334,7 @@
         if (window[moduleName]) {
             return Promise.resolve(window[moduleName]);
         }
-    
+
         if (moduleCache.current.has(moduleName)) {
             return moduleCache.current.get(moduleName);
         }
@@ -311,7 +381,10 @@
             if (prop === 'importModule') return async (moduleName, modulePath) => {
                 const normalizedPath = modulePath.startsWith('./') || modulePath.startsWith('../') ? modulePath : `./${modulePath}`;
                 if (!window[moduleName]) {
-                    await loadSerJSModule(moduleName, normalizedPath);
+                    await loadSerJSModule(
+                        moduleName,
+                        `${$BASE_URL}${normalizedPath}`
+                    );
                 }
                 return new Proxy(window[moduleName], {
                     get(target, method) {
@@ -330,7 +403,10 @@
                     get(target, method) {
                         return async (...args) => {
                             if (!window.SerJSNavigation) {
-                                await loadSerJSModule('SerJSNavigation', '../../SerJS/core/SerJSNavigation.js')
+                                await loadSerJSModule(
+                                    'SerJSNavigation',
+                                    `${$BASE_URL}/SerJS/core/SerJSNavigation.js`
+                                );
                             }
                             const value = window.SerJSNavigation[method];
                             if (typeof value === 'function') {
@@ -348,20 +424,20 @@
                     if (!window.SerJSActions) {
                         await loadSerJSModule(
                             'SerJSActions',
-                            '../../SerJS/core/SerJSActions.js'
+                            `${$BASE_URL}/SerJS/core/SerJSActions.js`
                         );
                     }
-            
+
                     if (typeof window.SerJSActions !== 'function') {
                         throw new Error('SerJSActions no es una función');
                     }
 
-                   // console.log("window.SerJSActions", window.SerJSActions);
-            
+                    // console.log("window.SerJSActions", window.SerJSActions);
+
                     return window.SerJSActions(...args);
                 };
             }
-            
+
 
             if (prop === 'store') {
                 // Crear un proxy que intercepte el acceso al método create
@@ -370,7 +446,10 @@
                         return async (...args) => {
                             // Cargar SerJSStore si no está disponible
                             if (!window.SerJSStore) {
-                                await loadSerJSModule('SerJSStore', '../../SerJS/core/SerJSStore.js')
+                                await loadSerJSModule(
+                                    'SerJSStore',
+                                    `${$BASE_URL}/SerJS/core/SerJSStore.js`
+                                );
                             }
                             // Llamar al método en SerJSStore
                             if (typeof window.SerJSStore[method] === 'function') {

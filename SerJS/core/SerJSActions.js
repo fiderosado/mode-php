@@ -1,16 +1,18 @@
 (function (window, document) {
     'use strict';
-    
+
     /**
      * Factory function que crea una instancia de Actions con un token CSRF específico
      * @param {string} csrfToken - Token CSRF para usar en las peticiones
      * @returns {Proxy} Proxy con método call para ejecutar acciones
      */
     function createActions(csrfToken) {
- 
+
+
+
         async function call(name, data = {}) {
             const formData = new FormData();
-            
+
             // Agregar CSRF token
             if (csrfToken) {
                 formData.append('_token', csrfToken);
@@ -19,21 +21,24 @@
             }
 
             // Agregar datos al FormData
-            for (const key in data) {
-                if (data.hasOwnProperty(key)) {
-                    const value = data[key];
-                    
-                    // Manejar objetos y arrays convirtiéndolos a JSON
-                    if (typeof value === 'object' && value !== null && !(value instanceof File) && !(value instanceof Blob)) {
-                        formData.append(key, JSON.stringify(value));
-                    } else {
-                        formData.append(key, value);
+            // validar si data tiene alguna propiedad
+            if (Object.keys(data).length !== 0 && data !== null) {
+                for (const key in data) {
+                    if (data.hasOwnProperty(key)) {
+                        const value = data[key];
+
+                        // Manejar objetos y arrays convirtiéndolos a JSON
+                        if (typeof value === 'object' && value !== null && !(value instanceof File) && !(value instanceof Blob)) {
+                            formData.append(key, JSON.stringify(value));
+                        } else {
+                            formData.append(key, value);
+                        }
                     }
                 }
             }
 
             try {
-                
+
                 const response = await fetch(`?__action=${encodeURIComponent(name)}`, {
                     method: 'POST',
                     body: formData,
@@ -42,18 +47,23 @@
                     }
                 });
 
+                const contentType = response.headers.get('content-type') || "";
+
                 // Verificar si la respuesta es exitosa
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ 
-                        error: `HTTP error! status: ${response.status}` 
+                    const errorData = await response.json().catch(() => ({
+                        error: `HTTP error! status: ${response.status}`
                     }));
                     throw new Error(errorData.error || `Error ${response.status}`);
                 }
 
-                // Parsear y retornar la respuesta JSON
-                const result = await response.json();
-                return result;
-                
+                // Parsear y retornar la respuesta JSON o Html
+                if (contentType.includes('application/json')) {
+                    return await response.json();
+                } else {
+                    return await response.text();
+                }
+
             } catch (error) {
                 // Manejar errores de red o parsing
                 console.error(`[SerJSActions] Error al ejecutar acción "${name}":`, error);

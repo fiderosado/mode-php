@@ -1,7 +1,7 @@
 <?php
 namespace Core\Http;
 
-class Action {
+class ServerAction {
     private static array $actions = [];
     private static ?string $currentPath = null;
 

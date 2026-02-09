@@ -1,14 +1,19 @@
+<?php
+$baseUrl = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'];
+?>
 <!DOCTYPE html>
 <html>
-<head>
+<head id="app-head">
   <title>App Router PHP</title>
-  <link rel="stylesheet" href="http://dev.anfitrion.us:8011/app/css/tailwind.css">
+  <link rel="stylesheet" href="<?= $baseUrl ?>/app/css/tailwind.css">
+  <script src="/SerJS/SerJS.js"></script>
+  <!-- end head layout -->
 </head>
 <body class="min-h-screen !flex !flex-col">
-  <header class="block">Header</header>
+  <header class="block">Header 2026</header>
   <main class="flex-1 w-full !grow"> 
     <?php require $page; ?>
   </main>
-  <footer class="block">Footer</footer>
+  <footer class="block">Footer 2026</footer>
 </body>
 </html>

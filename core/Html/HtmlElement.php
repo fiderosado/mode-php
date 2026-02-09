@@ -8,13 +8,13 @@ use Core\File;
 abstract class HtmlElement {
     
     const off = 0;
-    protected $style = null;
+    protected $style=null;
     protected $id;
     protected $class;
     protected $resp;
     protected $dataId;
     protected static $counter = 0;
-    protected $cssContent = null; 
+    protected $cssContent =null; 
     public static $instance;
     
     /**
@@ -144,7 +144,7 @@ abstract class HtmlElement {
         return $this;
     }
     
-    public function setClass($class) {
+    public function class($class) {
         if (is_array($class)) {
             $this->class = implode(' ', $class);
         } elseif (is_string($class)) {
@@ -162,7 +162,6 @@ abstract class HtmlElement {
     }
     
     protected function getStyle() {
-        var_dump($this->style);
         return (empty($this->style)) ? '' : ' style="' . $this->style . '"';
     }
     

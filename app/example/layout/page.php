@@ -10,9 +10,9 @@ use Core\Html\Elements\Section;
 //IdGenerator::setIdentifierPrefix('myapp-');
 
 App::in(
-    Header::in("Bienvenido")->setId("main-header")->setClass("header"),
+    Header::in("Bienvenido")->setId("main-header")->class("header"),
     Div::in(
-        Section::in("Contenido de sección 1")->setClass("sec1"),
-        Section::in("Contenido de sección 2")->setClass("sec2")
-    )->setClass("wrapper")
+        Section::in("Contenido de sección 1")->class("sec1"),
+        Section::in("Contenido de sección 2")->class("sec2")
+    )->class("wrapper")
 )->build();

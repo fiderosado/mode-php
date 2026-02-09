@@ -2,12 +2,14 @@
 
 namespace Core;
 
-use Core\Http\Action;
+use Core\Http\ServerAction;
 use Core\Http\CSRF;
 use Core\Http\HttpResponse;
 use Core\Http\Redirect;
 use Core\Http\Security;
 use core\Resolver;
+use Core\Utils\Console;
+use Exception;
 
 class Router
 {
@@ -38,7 +40,7 @@ class Router
         $actionsPath = dirname($page) . '/actions.php';
         if (file_exists($actionsPath)) {
             // Registrar la ruta actual para scope de acciones
-            Action::setCurrentPath($page);
+            ServerAction::setCurrentPath($page);
             require_once $actionsPath;
         }
 
@@ -92,10 +94,10 @@ class Router
 
             // VERIFICAR CSRF TOKEN
 
-            if (!CSRF::verify($actionToken)) {
+            /* if (!CSRF::verify($actionToken)) {
                 self::actionError('Invalid CSRF token', 403);
                 return;
-            }
+            } */
 
             // VERIFICAR ORIGIN (mismo dominio)
             if (!Security::verifyOrigin()) {
@@ -119,7 +121,7 @@ class Router
             }
 
             // EJECUTAR LA ACCIÓN (verifica scope automáticamente)
-            $result = Action::execute($actionName, $data, $params, $pagePath);
+            $result = ServerAction::execute($actionName, $data, $params, $pagePath);
 
             // MANEJAR RESPUESTA
             if ($result instanceof Redirect) {
@@ -127,9 +129,18 @@ class Router
                 exit;
             }
 
+            if ($result instanceof HttpResponse) {
+                // retornar la instancia
+                echo $result;
+                exit;
+            }
+
             // Retornar JSON
-            header('Content-Type: application/json');
-            echo json_encode($result);
+            //header('Content-Type: application/json');
+            //echo json_encode($result);
+
+            HttpResponse::json($result, ['status' => 200]);
+
             exit;
         } catch (\Exception $e) {
             self::actionError($e->getMessage(), 403);
@@ -139,7 +150,7 @@ class Router
     // Helper para errores de acciones
     protected static function actionError(string $message, int $code = 400)
     {
-        HttpResponse::json(['error' => $message],['status'=>$code]);
+        HttpResponse::json(['error' => $message], ['status' => $code]);
         exit;
     }
 

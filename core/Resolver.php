@@ -12,7 +12,6 @@ class Resolver
     private const OMIT_LAYOUT_PATHS = [
         '/app/api/',
         '/app/test-js/',
-        '/example/actions'
     ];
     public static function resolve(array $segments, string $basePath, array &$params)
     {

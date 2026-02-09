@@ -30,6 +30,35 @@ final class HttpResponse
     }
 
     /* =========================
+       HTML
+       ========================= */
+
+    public static function html(mixed $components, array $options = []): never
+    {
+        ob_clean();
+
+        http_response_code($options['status'] ?? 200);
+
+        header('Content-Type: text/html; charset=utf-8');
+
+        foreach ($options['headers'] ?? [] as $k => $v) {
+            header("$k: $v");
+        }
+
+        $items = is_array($components) ? $components : [$components];
+
+        foreach ($items as $item) {
+            if (is_object($item) && method_exists($item, 'build')) {
+                echo $item->build();
+            } elseif (is_string($item) || is_numeric($item)) {
+                echo $item;
+            }
+        }
+
+        exit;
+    }
+
+    /* =========================
        SECURE COOKIE
        ========================= */
 

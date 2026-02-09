@@ -9,7 +9,6 @@ class App extends HtmlElement {
         return 'html';
     }
     
-
     public function __construct() {
         $args = func_get_args()[0] ?? [];
         $this->work($args);
