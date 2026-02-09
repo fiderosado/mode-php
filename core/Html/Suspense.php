@@ -37,9 +37,13 @@ class Suspense extends HtmlElement
      */
     protected function getAttributes(): string
     {
+        $payload = $this->action->getPayload();
+        $payloadJson = json_encode($payload);
+        $payloadBase64 = base64_encode($payloadJson);
         return parent::getAttributes()
             . ' data-suspense="' . htmlspecialchars($this->hash) . '"'
             . ' data-action="' . htmlspecialchars($this->actionName) . '"'
-            . ' data-target="' . htmlspecialchars($this->getDataId()) . '"';
+            . ' data-target="' . htmlspecialchars($this->getDataId()) . '"'
+            . ' data-payload="' . $payloadBase64 . '"';
     }
 }

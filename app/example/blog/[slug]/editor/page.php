@@ -31,7 +31,9 @@ Suspense::in(
 
 Suspense::in(
     Div::in("preparando un hola"),
-    SuspenseAction::in("hola-suspense")
+    SuspenseAction::in("hola-suspense")->send([
+        'id' => 'fiderosado',
+    ])
 )->class('p-2')->render();
 
 ?>
@@ -52,4 +54,5 @@ Suspense::in(
         });
     });
 </script>
+
 </html>

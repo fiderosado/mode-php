@@ -6,6 +6,7 @@ class SuspenseAction
 {
     private ?string $actionName = null;
     private string $hash;
+    private array $send = [];
 
     private function __construct(array $args = [])
     {
@@ -26,5 +27,16 @@ class SuspenseAction
     public function getName(): ?string
     {
         return $this->actionName;
+    }
+
+    public function getPayload(): array
+    {
+        return $this->send;
+    }
+
+    public function send(array $data): SuspenseAction
+    {
+        $this->send = $data;
+        return $this;
     }
 }

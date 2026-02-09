@@ -1,6 +1,9 @@
 @layer properties {
   @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {
     *, :before, :after, ::backdrop {
+      --tw-space-y-reverse: 0;
+      --tw-space-x-reverse: 0;
+      --tw-border-style: solid;
       --tw-font-weight: initial;
       --tw-shadow: 0 0 #0000;
       --tw-shadow-color: initial;
@@ -23,16 +26,26 @@
   --font-sans: ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   --color-red-500: oklch(63.7% .237 25.331);
+  --color-yellow-100: oklch(97.3% .071 103.193);
+  --color-yellow-400: oklch(85.2% .199 91.936);
   --color-green-500: oklch(72.3% .219 149.579);
+  --color-blue-50: oklch(97% .014 254.604);
+  --color-blue-500: oklch(62.3% .214 259.815);
   --color-indigo-500: oklch(58.5% .233 277.117);
+  --color-gray-600: oklch(44.6% .03 256.802);
   --color-black: #000;
   --color-white: #fff;
   --spacing: .25rem;
   --container-md: 28rem;
+  --text-sm: .875rem;
+  --text-sm--line-height: calc(1.25 / .875);
   --text-2xl: 1.5rem;
   --text-2xl--line-height: calc(2 / 1.5);
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: calc(2.25 / 1.875);
   --font-weight-bold: 700;
   --radius-xl: .75rem;
+  --animate-bounce: bounce 1s infinite;
   --default-font-family: var(--font-sans);
   --default-mono-font-family: var(--font-mono);
 }
@@ -181,6 +194,9 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 .mt-4 {
   margin-top: calc(var(--spacing) * 4);
 }
+.mb-6 {
+  margin-bottom: calc(var(--spacing) * 6);
+}
 .\!flex {
   display: flex !important;
 }
@@ -190,8 +206,14 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 .flex {
   display: flex;
 }
+.h-4 {
+  height: calc(var(--spacing) * 4);
+}
 .min-h-screen {
   min-height: 100vh;
+}
+.w-4 {
+  width: calc(var(--spacing) * 4);
 }
 .w-full {
   width: 100%;
@@ -205,14 +227,56 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 .\!grow {
   flex-grow: 1 !important;
 }
+.animate-bounce {
+  animation: var(--animate-bounce);
+}
 .\!flex-col {
   flex-direction: column !important;
+}
+.items-center {
+  align-items: center;
+}
+:where(.space-y-2 > :not(:last-child)) {
+  --tw-space-y-reverse: 0;
+  margin-block-start: calc(calc(var(--spacing) * 2) * var(--tw-space-y-reverse));
+  margin-block-end: calc(calc(var(--spacing) * 2) * calc(1 - var(--tw-space-y-reverse)));
+}
+:where(.space-x-2 > :not(:last-child)) {
+  --tw-space-x-reverse: 0;
+  margin-inline-start: calc(calc(var(--spacing) * 2) * var(--tw-space-x-reverse));
+  margin-inline-end: calc(calc(var(--spacing) * 2) * calc(1 - var(--tw-space-x-reverse)));
+}
+.rounded {
+  border-radius: var(--radius);
+}
+.rounded-full {
+  border-radius: 3.40282e38px;
 }
 .rounded-xl {
   border-radius: var(--radius-xl);
 }
+.border {
+  border-style: var(--tw-border-style);
+  border-width: 1px;
+}
+.border-l-4 {
+  border-left-style: var(--tw-border-style);
+  border-left-width: 4px;
+}
+.border-blue-500 {
+  border-color: var(--color-blue-500);
+}
+.border-yellow-400 {
+  border-color: var(--color-yellow-400);
+}
 .bg-black {
   background-color: var(--color-black);
+}
+.bg-blue-50 {
+  background-color: var(--color-blue-50);
+}
+.bg-blue-500 {
+  background-color: var(--color-blue-500);
 }
 .bg-green-500 {
   background-color: var(--color-green-500);
@@ -223,14 +287,23 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 .bg-red-500 {
   background-color: var(--color-red-500);
 }
+.bg-yellow-100 {
+  background-color: var(--color-yellow-100);
+}
 .p-2 {
   padding: calc(var(--spacing) * 2);
+}
+.p-3 {
+  padding: calc(var(--spacing) * 3);
 }
 .p-4 {
   padding: calc(var(--spacing) * 4);
 }
 .p-6 {
   padding: calc(var(--spacing) * 6);
+}
+.p-8 {
+  padding: calc(var(--spacing) * 8);
 }
 .px-4 {
   padding-inline: calc(var(--spacing) * 4);
@@ -242,9 +315,20 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
   font-size: var(--text-2xl);
   line-height: var(--tw-leading, var(--text-2xl--line-height));
 }
+.text-3xl {
+  font-size: var(--text-3xl);
+  line-height: var(--tw-leading, var(--text-3xl--line-height));
+}
+.text-sm {
+  font-size: var(--text-sm);
+  line-height: var(--tw-leading, var(--text-sm--line-height));
+}
 .font-bold {
   --tw-font-weight: var(--font-weight-bold);
   font-weight: var(--font-weight-bold);
+}
+.text-gray-600 {
+  color: var(--color-gray-600);
 }
 .text-white {
   color: var(--color-white);
@@ -253,10 +337,35 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
   --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, #0000001a), 0 1px 2px -1px var(--tw-shadow-color, #0000001a);
   box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
 }
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(-25%);
+    animation-timing-function: cubic-bezier(.8, 0, 1, 1);
+  }
+  50% {
+    transform: none;
+    animation-timing-function: cubic-bezier(0, 0, .2, 1);
+  }
+}
 @supports (not (-webkit-appearance: -apple-pay-button))  or (contain-intrinsic-size: 1px) {
   ::placeholder {
     color: color-mix(in oklab, currentcolor 50%, transparent);
   }
+}
+@property --tw-space-y-reverse {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+@property --tw-space-x-reverse {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+@property --tw-border-style {
+  syntax: "*";
+  inherits: false;
+  initial-value: solid;
 }
 @property --tw-font-weight {
   syntax: "*";

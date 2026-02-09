@@ -469,7 +469,6 @@
                     }
                 });
             }
-
             if (prop === 'suspense') {
                 return new Proxy({}, {
                     get(target, method) {
