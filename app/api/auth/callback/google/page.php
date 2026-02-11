@@ -1,148 +1,117 @@
 <?php
 
-use Core\Http\Connect;
-use Core\Security\Jwt;
-use Core\Utils\Console;
-
-session_start();
-
-if (
-    !isset($_SESSION['oauth_state']) ||
-    !isset($_GET['state']) ||
-    $_GET['state'] !== $_SESSION['oauth_state']
-) {
-    http_response_code(401);
-    exit('Invalid state');
-}
-
-$code = $_GET['code'];
-
-$tokenResponse = Connect::post('https://oauth2.googleapis.com/token', [
-    'client_id'     => $_ENV['AUTH_GOOGLE_ID'],
-    'client_secret' => $_ENV['AUTH_GOOGLE_SECRET'],
-    'code'          => $code,
-    'redirect_uri'  => $_ENV['APP_URL'] . '/api/auth/callback/google',
-    'grant_type'    => 'authorization_code'
-]);
- 
-Console::log("token response->", $tokenResponse);
-
-/* 
-{
-    "success": {
-        "data": {
-            "access_token": "ya290206",
-            "expires_in": 3599,
-            "refresh_token": "1c4VU",
-            "scope": "https://www.googleapis.com/auth/userinfo.email openid https://www.googleapis.com/auth/userinfo.profile",
-            "token_type": "Bearer",
-            "id_token": "eyUA"
-        }
-    }
-}
-*/
-
-if (!$tokenResponse['success']) {
-    http_response_code(401);
-    exit('Invalid token');
-}
-
-$token = $tokenResponse['success']['data']['access_token'] ?? false;
-
-if (!$token) {
-    http_response_code(401);
-    exit('Invalid token');
-}
-
-$responseUserInfo = Connect::get('https://openidconnect.googleapis.com/v1/userinfo',  [
-    'headers' => [
-        'Authorization' => "Bearer {$token}",
-    ]
-]);
-
-/* 
-{
-    "success": {
-        "data": {
-            "sub": "117204732513714275660",
-            "name": "Fidel Remedios Rosado",
-            "given_name": "Fidel",
-            "family_name": "Remedios Rosado",
-            "picture": "https://lh3.googleusercontent.com/a/ACg8ocJYLs9-zN_CUEGoZN72GzwmhoRYaJDpLsEIJ4U2iXOgtzniAhMc=s96-c",
-            "email": "fiderosado@gmail.com",
-            "email_verified": true
-        }
-    }
-}
-*/
-
-Console::log("responseUserInfo->", $responseUserInfo);
-
-if (!$responseUserInfo['success']) {
-    http_response_code(401);
-    exit('Invalid User Info');
-}
-
-$userInfo = $responseUserInfo["success"]["data"] ?? false;
-
-if (!$userInfo) {
-    http_response_code(401);
-    exit('Invalid user info');
-}
-
-
 /**
- * userInfo contiene:
- * - sub (id google)
- * - email
- * - name
- * - picture
+ * GET /api/auth/callback/google
+ * Callback de Google OAuth 2.0
+ * Procesa el código de autorización y crea la sesión del usuario
  */
 
-/* $_SESSION['user'] = [
-    'id' => $userInfo['sub'],
-    'email' => $userInfo['email'],
-    'name' => $userInfo['name'],
-    'image' => $userInfo['picture'],
-    'provider' => 'google'
-]; */
+use Auth\Auth;
+use Core\Http\Http;
 
+Http::in(function ($req, $res) {
 
+    // CRÍTICO: Iniciar sesión PRIMERO, antes de cualquier otra cosa
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
-$jwt = Jwt::in([
-    'secret' => $_ENV['JWT_SECRET_SIGN'],
-    'issuer' => 'dev.anfitrion.us',
-])
-    ->encode([
-        'sub' => $userInfo['sub'],
-        'email' => $userInfo['email'],
-        'name' => $userInfo['name'],
-        'provider' => 'google'
-    ], 3600);
+    // Cargar la configuración de autenticación
+    $Auth = require __DIR__ . '/../../../../../auth.config.php';
 
+    // Verificar que sea una petición GET
+    if ($req->method() !== 'GET') {
+        $res->json([
+            'error' => 'Method Not Allowed',
+            'message' => 'Este endpoint solo acepta peticiones GET'
+        ], ['status' => 405]);
+        return;
+    }
 
-Console::log("jwt->", $jwt);
+    try {
+        // Verificar si hay errores de Google
+        if (isset($_GET['error'])) {
+            $errorMsg = urlencode($_GET['error']);
+            $res->redirect("/auth/error?error=$errorMsg&provider=google");
+            return;
+        }
 
+        // Obtener el código de autorización
+        $code = $_GET['code'] ?? null;
+        $state = $_GET['state'] ?? null;
 
-// Registrar cookie igual que NextAuth
-$cookieName = 'php-auth.session-token';
-//'__Secure-next-auth.session-token';
-setcookie(
-    $cookieName,
-    $jwt,
-    [
-        'expires'  => time() + 3600,
-        'path'     => '/',
-        'domain'   => 'dev.anfitrion.us',
-        'secure'   => false,
-        'httponly' => true,
-        'samesite' => 'Lax',
-    ]
-);
+        if (!$code) {
+            $errorMsg = urlencode('Código de autorización no recibido');
+            $res->redirect("/auth/error?error=$errorMsg&provider=google");
+            return;
+        }
 
-unset($_SESSION['oauth_state']);
-header('Location: /');
+        // Log para debug
+        error_log("State recibido de Google: " . ($state ?? 'NULL'));
+        error_log("State guardado en sesión: " . ($_SESSION['oauth_state'] ?? 'NULL'));
+        error_log("Session ID en callback: " . session_id());
 
-// tipo lax
-//  authjs.callback-url : http://dev.anfitrion.us:3000/
-// authjs.session-token : token
+        // Verificar el state (CSRF protection)
+        $savedState = $_SESSION['oauth_state'] ?? null;
+
+        if (!$state || !$savedState || $state !== $savedState) {
+            error_log("CSRF MISMATCH - State recibido: '$state', State guardado: '$savedState'");
+            $errorMsg = urlencode('Estado de OAuth inválido - posible ataque CSRF');
+            $errorCode = 'csrf_mismatch';
+            $res->redirect("/auth/error?error=$errorMsg&code=$errorCode&provider=google&debug_state_received=" . urlencode($state ?? 'null') . "&debug_state_saved=" . urlencode($savedState ?? 'null'));
+            return;
+        }
+
+        // Limpiar el state usado
+        unset($_SESSION['oauth_state']);
+
+        // Obtener el proveedor de Google
+        $googleProvider = $Auth->getProvider('google');
+
+        if (!$googleProvider) {
+            $errorMsg = urlencode('Google provider no configurado');
+            $res->redirect("/auth/error?error=$errorMsg&provider=google");
+            return;
+        }
+
+        // Autorizar con el código recibido
+        $user = $googleProvider->authorize([
+            'code' => $code,
+            'state' => $state
+        ]);
+
+        if (!$user) {
+            $errorMsg = urlencode('No se pudo autenticar el usuario con Google');
+            $res->redirect("/auth/error?error=$errorMsg&provider=google");
+            return;
+        }
+
+        // Crear la sesión usando Auth
+        $session = $Auth->signIn('google', ['code' => $code, 'state' => $state]);
+
+        // Obtener la URL de redirección guardada o usar dashboard por defecto
+        $callbackUrl = $_SESSION['callbackUrl'] ?? '/dashboard';
+        unset($_SESSION['callbackUrl']);
+
+        // Ejecutar el callback de redirect si está configurado
+        $redirectCallback = $Auth->getConfig()['callbacks']['redirect'] ?? null;
+        if ($redirectCallback && is_callable($redirectCallback)) {
+            $callbackUrl = $redirectCallback($callbackUrl, $_ENV['APP_URL'] ?? '');
+        }
+
+        error_log("Login exitoso, redirigiendo a: $callbackUrl");
+
+        // Redirigir al usuario
+        $res->redirect($callbackUrl);
+
+    } catch (\Exception $e) {
+        // Log del error con detalles
+        error_log("Error en callback de Google: " . $e->getMessage());
+        error_log("Stack trace: " . $e->getTraceAsString());
+
+        // Redirigir a página de error con información completa
+        $errorMsg = urlencode($e->getMessage());
+        $errorCode = urlencode($e->getCode() ?: 'unknown');
+        $res->redirect("/auth/error?error=$errorMsg&code=$errorCode&provider=google");
+    }
+});

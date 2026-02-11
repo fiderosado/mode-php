@@ -39,4 +39,15 @@ class SuspenseAction
         $this->send = $data;
         return $this;
     }
+
+    /**
+     * Transfiere el payload de data hasta el método loadUsers (alias de send)
+     * 
+     * @param array $data El payload que será pasado a la acción
+     * @return $this Para encadenamiento de métodos
+     */
+    public function data(array $data): SuspenseAction
+    {
+        return $this->send($data);
+    }
 }
