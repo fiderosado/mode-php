@@ -1,0 +1,52 @@
+body {
+    font-family: Arial, sans-serif;
+    padding: 40px !important;
+    background: #f5f5f5;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    background: #fff;
+}
+
+th,
+td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: left;
+    /* Permitir que textos muy largos (como tokens/JWT) se corten en varias líneas
+       sin desbordar el contenedor principal ni romper el diseño */
+    word-break: break-all;
+    overflow-wrap: anywhere;
+}
+
+th {
+    background: #333;
+    color: white;
+}
+
+.empty {
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ddd;
+}
+
+/* Tarjeta de acciones */
+.action-card {
+    margin-top: 20px;
+}
+
+/* Botón "Create cookie" */
+#toggleBtn {
+    margin-top: 10px;
+    background: #000;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    cursor: pointer;
+}
+
+#toggleBtn:hover {
+    background: #222;
+}

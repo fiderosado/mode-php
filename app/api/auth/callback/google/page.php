@@ -1,26 +1,27 @@
 <?php
-session_start();
 
 /**
  * GET /api/auth/callback/google
- * Callback de Google OAuth 2.0
- * Procesa el código de autorización y crea la sesión del usuario
+ * Callback de Google OAuth 2.0 - Integrado con Auth
+ * Este endpoint SOLO se llama UNA VEZ cuando Google redirige aquí
  */
 
-use Auth\Auth;
 use Core\Http\Http;
-use Core\Security\Jwt;
-use Core\Utils\Console;
+use Core\Cookies\Cookie;
 
 Http::in(function ($req, $res) {
+    // Asegurar que no haya output antes de establecer cookies
+    if (!ob_get_level()) {
+        ob_start();
+    }
 
-    error_log("Recibiendo callback desde Google :");
+    error_log("=== CALLBACK GOOGLE INICIADO ===");
+    error_log("GET params: " . json_encode($_GET));
+    error_log("COOKIE recibidas: " . json_encode($_COOKIE));
+    error_log("Session ID ANTES de cargar Auth: " . session_id());
 
-    $Auth = require __DIR__ . '/../../../../../auth.config.php';
-
-    // Verificar que sea una petición GET
     if ($req->method() !== 'GET') {
-
+        error_log("Callback: ERROR - Método no permitido: " . $req->method());
         $res->json([
             'error' => 'Method Not Allowed',
             'message' => 'Este endpoint solo acepta peticiones GET'
@@ -29,9 +30,18 @@ Http::in(function ($req, $res) {
     }
 
     try {
-        // Verificar si hay errores de Google
+        // Auth config carga y SessionManager inicia sesión automáticamente
+        $Auth = require __DIR__ . '/../../../../../auth.config.php';
+
+        error_log("Callback: Auth config cargado");
+        error_log("Callback: Session ID DESPUÉS de cargar Auth: " . session_id());
+        error_log("Callback: Session name: " . session_name());
+        error_log("Callback: \$_SESSION keys: " . json_encode(array_keys($_SESSION)));
+
+        // Verificar errores de Google
         if (isset($_GET['error'])) {
             $errorMsg = urlencode($_GET['error']);
+            error_log("Callback: ERROR de Google: {$errorMsg}");
             $res->redirect("/auth/error?error=$errorMsg&provider=google");
             return;
         }
@@ -39,108 +49,96 @@ Http::in(function ($req, $res) {
         $code = $_GET['code'] ?? null;
         $state = $_GET['state'] ?? null;
 
-        // Log para debug
-        error_log("State recibido de Google: " . ($state ?? 'NULL'));
-        error_log("State guardado en sesión: " . ($_SESSION['oauth_state'] ?? 'NULL'));
-        error_log("Code recibido: " . ($code ?? 'NULL'));
-        error_log("State recibido: " . ($state ?? 'NULL'));
-        error_log("Session ID en callback: " . session_id());
+        // Usar Cookie::request() para leer cookies
+        $requestCookies = Cookie::request();
+        $stateBackupCookie = $requestCookies->get('oauth_state_backup');
+
+        error_log("Callback: Code recibido: " . ($code ? 'presente' : 'null'));
+        error_log("Callback: State recibido: " . ($state ?? 'null'));
+        error_log("Callback: State en \$_SESSION: " . ($_SESSION['oauth_state'] ?? 'null'));
+        error_log("Callback: State en cookie backup: " . ($stateBackupCookie ?? 'null'));
 
         if (!$code || !$state) {
-            $errorMsg = 'Invalid code or state';
-            error_log("Código o estado inválido: Code: $code, State: $state");
-            $res->redirect("/auth/error?error=$errorMsg&provider=google&code=400");
+            error_log("Callback: ERROR - Falta code o state");
+            $res->redirect("/auth/error?error=invalid_request&provider=google");
             return;
         }
 
-        if (
-            !isset($_SESSION['oauth_state']) ||
-            !isset($_GET['state']) ||
-            $_GET['state'] !== $_SESSION['oauth_state']
-        ) {
-            $errorMsg = 'Invalid state';
-            error_log("CSRF MISMATCH - State recibido: '{$_GET['state']}', State guardado: '{$_SESSION['oauth_state']}'");
-            $res->redirect("/auth/error?error=$errorMsg&provider=google&code=401");
-        }
+        // Intentar obtener state de sesión o cookie backup
+        $savedState = $_SESSION['oauth_state'] ?? $stateBackupCookie ?? null;
 
-        // Obtener el proveedor de Google
-        $googleProvider = $Auth->getProvider('google');
-        if (!$googleProvider) {
-            $errorMsg = urlencode('Google provider no configurado');
-            $res->redirect("/auth/error?error=$errorMsg&provider=google");
+        if (!$savedState) {
+            error_log("Callback: ERROR - No se encontró state guardado en ningún lugar");
+            error_log("  - \$_SESSION completo: " . json_encode($_SESSION));
+            error_log("  - Cookies completas: " . json_encode($requestCookies->getAll()));
+            $res->redirect("/auth/error?error=no_state_found&provider=google");
             return;
         }
 
-        // Autorizar con el código recibido
-        $user = $googleProvider->authorize([
+        // Validar CSRF
+        if ($_GET['state'] !== $savedState) {
+            error_log("Callback: ERROR - CSRF validation failed");
+            error_log("  - State recibido: " . $_GET['state']);
+            error_log("  - State esperado: " . $savedState);
+            $res->redirect("/auth/error?error=invalid_state&provider=google");
+            return;
+        }
+
+        error_log("Callback: CSRF validado correctamente usando: " . (isset($_SESSION['oauth_state']) ? 'SESSION' : 'COOKIE_BACKUP'));
+
+        // Limpiar state backup cookie usando Cookie::response()
+        if ($requestCookies->has('oauth_state_backup')) {
+            $responseCookies = Cookie::response();
+            $responseCookies->delete('oauth_state_backup');
+            error_log("Callback: Cookie backup de state eliminada usando Cookie::response()");
+        }
+
+        // PUNTO CRÍTICO: Usar Auth->signIn() que ejecuta TODO el flujo
+        error_log("Callback: Llamando a Auth->signIn('google', ...)");
+
+        $session = $Auth->signIn('google', [
             'code' => $code,
             'state' => $state
         ]);
 
-        if (!$user) {
-            $errorMsg = urlencode('No se pudo autenticar el usuario con Google');
-            $res->redirect("/auth/error?error=$errorMsg&provider=google");
-            return;
+        error_log("Callback: Auth->signIn() completado exitosamente");
+        error_log("Callback: Session retornada: " . json_encode($session));
+        error_log("Callback: Verificando si la cookie se estableció...");
+        
+        // Verificar headers enviados
+        if (headers_sent($file, $line)) {
+            error_log("Callback: ⚠️ WARNING - Headers ya enviados desde {$file}:{$line}");
+        } else {
+            error_log("Callback: ✓ Headers aún no enviados - las cookies deberían establecerse correctamente");
         }
 
-        error_log("Google user data: " . json_encode($user));
-
-
-        $jwt = Jwt::in([
-            'secret' => $_ENV['JWT_SECRET_SIGN'],
-            'issuer' => 'dev.anfitrion.us',
-        ])
-            ->encode([
-                'sub' => $user['sub'],
-                'email' => $user['email'],
-                'name' => $user['name'],
-                'image' => $user['picture'],
-                'provider' => 'google'
-            ], 3600);
-
-
-        error_log("El token generado es: " . $jwt);
-
-        // Registrar cookie igual que NextAuth
-        $cookieName = 'auth.session-token';
-        //'__Secure-next-auth.session-token';
-        setcookie(
-            $cookieName,
-            $jwt,
-            [
-                'expires'  => time() + 3600,
-                'path'     => '/',
-                'domain'   => 'dev.anfitrion.us',
-                'secure'   => false,
-                'httponly' => true,
-                'samesite' => 'Lax',
-            ]
-        );
-
+        // Limpiar state de OAuth
         unset($_SESSION['oauth_state']);
+        error_log("Callback: oauth_state limpiado de sesión");
 
-        // Obtener la URL de redirección guardada o usar dashboard por defecto
+        // Obtener URL de redirección
         $callbackUrl = $_SESSION['callbackUrl'] ?? '/';
         unset($_SESSION['callbackUrl']);
+        error_log("Callback: callbackUrl: {$callbackUrl}");
 
-        // Ejecutar el callback de redirect si está configurado
+        // Ejecutar callback de redirect si existe
         $redirectCallback = $Auth->getConfig()['callbacks']['redirect'] ?? null;
         if ($redirectCallback && is_callable($redirectCallback)) {
+            error_log("Callback: Ejecutando redirect callback");
             $callbackUrl = $redirectCallback($callbackUrl, $_ENV['APP_URL'] ?? '');
+            error_log("Callback: URL final después de redirect callback: {$callbackUrl}");
         }
 
-        error_log("Login exitoso, redirigiendo a: $callbackUrl");
+        error_log("Callback: Redirigiendo a: {$callbackUrl}");
+        error_log("=== CALLBACK GOOGLE COMPLETADO ===");
 
-        // Redirigir al usuario
         $res->redirect($callbackUrl);
     } catch (\Exception $e) {
-        // Log del error con detalles
-        error_log("Error en callback de Google: " . $e->getMessage());
-        error_log("Stack trace: " . $e->getTraceAsString());
+        error_log("=== CALLBACK GOOGLE ERROR ===");
+        error_log("Callback: Exception: " . $e->getMessage());
+        error_log("Callback: Stack trace: " . $e->getTraceAsString());
 
-        // Redirigir a página de error con información completa
         $errorMsg = urlencode($e->getMessage());
-        $errorCode = urlencode($e->getCode() ?: 'unknown');
-        $res->redirect("/auth/error?error=$errorMsg&code=$errorCode&provider=google");
+        $res->redirect("/auth/error?error=$errorMsg&provider=google");
     }
 });

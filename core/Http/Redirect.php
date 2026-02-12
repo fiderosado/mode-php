@@ -1,4 +1,5 @@
 <?php
+
 namespace Core\Http;
 
 class Redirect
@@ -98,7 +99,7 @@ class Redirect
             if (session_status() === PHP_SESSION_NONE) {
                 session_start();
             }
-            
+
             foreach ($this->withData as $key => $value) {
                 $_SESSION['_flash'][$key] = $value;
             }

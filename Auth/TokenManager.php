@@ -2,6 +2,7 @@
 
 namespace Auth;
 
+use Core\Cookies\Cookie;
 use Exception;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
@@ -11,6 +12,7 @@ class TokenManager
     private string $secret;
     private string $algorithm = 'HS256';
     private int $expiration = 86400;
+    private string $cookieName = 'auth.session-token';
 
     public function __construct(string $secret, int $expiration = 86400)
     {
@@ -40,8 +42,16 @@ class TokenManager
         try {
             return JWT::decode($token, new Key($this->secret, $this->algorithm));
         } catch (Exception $e) {
+            error_log("Error verificando token: " . $e->getMessage());
             return null;
         }
+    }
+
+    public function getCreatedCookie(): ?string
+    {
+        // Usar la clase Cookie para leer cookies
+        $cookies = Cookie::request();
+        return $cookies->get($this->cookieName);
     }
 
     public function getTokenFromRequest(): ?string
@@ -51,42 +61,49 @@ class TokenManager
             return substr($authHeader, 7);
         }
 
-        $cookieName = 'auth.session-token';
-        return $_COOKIE[$cookieName] ?? null;
+        // Usar la clase Cookie para leer cookies
+        $cookies = Cookie::request();
+        return $cookies->get($this->cookieName);
     }
 
     public function setTokenCookie(string $token, string $path = '/'): void
     {
-        setcookie(
-            'auth.session-token',
-            $token,
-            [
-                'expires' => time() + $this->expiration,
-                'path' => $path,
-                'domain' => $_SERVER['HTTP_HOST'] ?? '',
-                'secure' => !in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1']),
-                'httponly' => true,
-                'samesite' => 'Lax'
-            ]
-        );
+        $domain = $_ENV['COOKIE_DOMAIN'] ?? $_SERVER['SERVER_NAME'] ?? '';
+        $isSecure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+
+        // Para desarrollo local
+        if (in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1'])) {
+            $isSecure = false;
+            $domain = '';
+        }
+
+        // Usar la clase Cookie para establecer cookies
+        $cookies = Cookie::response();
+        $cookies->set($this->cookieName, $token, [
+            'expires' => time() + $this->expiration,
+            'path' => $path,
+            'domain' => $domain,
+            'secure' => $isSecure,
+            'httpOnly' => true,
+            'sameSite' => 'Lax'
+        ]);
+
+        error_log("Cookie establecida usando Cookie::response(): {$this->cookieName} en dominio: {$domain}");
     }
 
     public function removeTokenCookie(): void
     {
-        setcookie(
-            'auth.session-token',
-            '',
-            [
-                'expires' => time() - 3600,
-                'path' => '/',
-                'domain' => $_SERVER['HTTP_HOST'] ?? '',
-                'secure' => !in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1']),
-                'httponly' => true,
-                'samesite' => 'Lax'
-            ]
-        );
+        $domain = $_ENV['COOKIE_DOMAIN'] ?? $_SERVER['HTTP_HOST'] ?? '';
 
-        unset($_COOKIE['auth.session-token']);
+        if (in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1'])) {
+            $domain = '';
+        }
+
+        // Usar la clase Cookie para eliminar cookies
+        $cookies = Cookie::response();
+        $cookies->delete($this->cookieName);
+
+        error_log("Cookie removida usando Cookie::response(): {$this->cookieName}");
     }
 
     public function refresh(object $payload): string
@@ -95,5 +112,15 @@ class TokenManager
         unset($newPayload['iat'], $newPayload['exp'], $newPayload['nbf']);
 
         return $this->generate($newPayload);
+    }
+
+    public function setCookieName(string $name): void
+    {
+        $this->cookieName = $name;
+    }
+
+    public function getCookieName(): string
+    {
+        return $this->cookieName;
     }
 }

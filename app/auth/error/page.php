@@ -8,14 +8,9 @@
  * Muestra variables de sesión, cookies, y parámetros relevantes
  */
 
-// Cargar configuración de Auth primero para iniciar la sesión correctamente
-try {
-    $Auth = require __DIR__ . '/../../../auth.config.php';
-} catch (Exception $e) {
-    // Si falla Auth, intentamos iniciar sesión manualmente como fallback
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+// Iniciar sesión si no está iniciada
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
 
 // Capturar el error de la URL

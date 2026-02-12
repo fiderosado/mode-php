@@ -1,18 +1,35 @@
 <?php
+
 namespace Core\Http;
 
+use Core\Cookies\Cookie;
+use Core\Cookies\Cookies;
 use RuntimeException;
+
 
 final class HttpResponse
 {
+    private static ?Cookies $cookieManager = null;
+
     /* =========================
-       JSON , ['status' => 201]
+       COOKIE MANAGER
+       ========================= */
+
+    private static function cookies(): Cookies
+    {
+        if (!self::$cookieManager) {
+            self::$cookieManager = Cookie::response();
+        }
+
+        return self::$cookieManager;
+    }
+
+    /* =========================
+       JSON
        ========================= */
 
     public static function json(mixed $data, array $options = []): never
     {
-        ob_clean();
-
         http_response_code($options['status'] ?? 200);
 
         header('Content-Type: application/json; charset=utf-8');
@@ -67,14 +84,14 @@ final class HttpResponse
         string $value,
         array $options = []
     ): void {
-        // Defaults ultra seguros
+
         $defaults = [
             'expires'  => 0,
             'path'     => '/',
             'domain'   => null,
             'secure'   => self::isHttps(),
-            'httponly' => true,
-            'samesite' => 'Strict',
+            'httpOnly' => true,
+            'sameSite' => 'Strict',
         ];
 
         $opts = array_merge($defaults, $options);
@@ -97,20 +114,14 @@ final class HttpResponse
            Validaciones duras
            ========================= */
 
-        if ($opts['samesite'] === 'None' && !$opts['secure']) {
+        if ($opts['sameSite'] === 'None' && !$opts['secure']) {
             throw new RuntimeException(
                 'SameSite=None requiere Secure=true'
             );
         }
 
-        setcookie($name, $value, [
-            'expires'  => $opts['expires'],
-            'path'     => $opts['path'],
-            'domain'   => $opts['domain'],
-            'secure'   => $opts['secure'],
-            'httponly' => $opts['httponly'],
-            'samesite' => $opts['samesite'],
-        ]);
+        // 🔥 Aquí usamos tu sistema de cookies
+        self::cookies()->set($name, $value, $opts);
     }
 
     /* =========================
@@ -119,9 +130,7 @@ final class HttpResponse
 
     public static function deleteCookie(string $name): void
     {
-        self::setCookie($name, '', [
-            'expires' => time() - 3600
-        ]);
+        self::cookies()->delete($name);
     }
 
     /* =========================
@@ -130,7 +139,10 @@ final class HttpResponse
 
     public static function redirect(string $url, int $status = 302): never
     {
-        ob_clean();
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
         http_response_code($status);
         header("Location: $url");
         exit;

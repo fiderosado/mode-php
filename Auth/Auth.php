@@ -8,10 +8,6 @@ use Auth\SessionManager;
 use Auth\TokenManager;
 use Exception;
 
-/**
- * Auth - Sistema de autenticación profesional para PHP
- * Maneja múltiples proveedores, JWT, cookies y sesiones
- */
 class Auth
 {
     protected array $providers = [];
@@ -23,6 +19,8 @@ class Auth
 
     public function __construct(array $config = [])
     {
+        error_log("Auth: Inicializando sistema de autenticación");
+        
         $this->validateConfig($config);
 
         $this->config = array_merge([
@@ -64,6 +62,8 @@ class Auth
         global $Auth, $sessionManager;
         $Auth = $this;
         $sessionManager = $this->sessionManager;
+
+        error_log("Auth: Sistema inicializado correctamente");
     }
 
     private function validateConfig(array $config): void
@@ -77,48 +77,59 @@ class Auth
     {
         foreach ($providers as $name => $provider) {
             $this->providers[$name] = $provider;
+            error_log("Auth: Provider registrado: {$name}");
         }
     }
 
     public function registerProvider(string $name, Provider $provider): self
     {
         $this->providers[$name] = $provider;
+        error_log("Auth: Provider registrado: {$name}");
         return $this;
     }
 
     public function registerCallbacks(array $callbacks): void
     {
         $this->callbacks = array_merge($this->callbacks, $callbacks);
+        error_log("Auth: " . count($callbacks) . " callbacks registrados");
     }
 
     public function registerCallback(string $name, callable $callback): self
     {
         $this->callbacks[$name] = $callback;
+        error_log("Auth: Callback registrado: {$name}");
         return $this;
     }
 
     public function registerEvents(array $events): void
     {
         $this->events = array_merge($this->events, $events);
+        error_log("Auth: " . count($events) . " eventos registrados");
     }
 
     public function registerEvent(string $name, callable $event): self
     {
         $this->events[$name] = $event;
+        error_log("Auth: Evento registrado: {$name}");
         return $this;
     }
 
     protected function executeCallback(string $name, ...$args): mixed
     {
         if (isset($this->callbacks[$name])) {
-            return call_user_func($this->callbacks[$name], ...$args);
+            error_log("Auth: Ejecutando callback '{$name}'");
+            $result = call_user_func($this->callbacks[$name], ...$args);
+            error_log("Auth: Callback '{$name}' ejecutado - Resultado: " . json_encode($result));
+            return $result;
         }
+        error_log("Auth: Callback '{$name}' no existe");
         return null;
     }
 
     protected function fireEvent(string $name, ...$args): void
     {
         if (isset($this->events[$name])) {
+            error_log("Auth: Disparando evento '{$name}'");
             call_user_func($this->events[$name], ...$args);
         }
     }
@@ -143,34 +154,71 @@ class Auth
 
     public function signIn(string $provider, array $credentials = []): array
     {
-        $this->fireEvent('signin');
+        error_log("=== Auth->signIn() INICIADO ===");
+        error_log("Auth->signIn: Provider: {$provider}");
+        error_log("Auth->signIn: Credentials: " . json_encode($credentials));
+        
+        $this->fireEvent('signin', ['provider' => $provider]);
 
         if (!isset($this->providers[$provider])) {
-            throw new Exception("Proveedor '$provider' no registrado");
+            error_log("Auth->signIn: ERROR - Proveedor '{$provider}' no registrado");
+            throw new Exception("Proveedor '{$provider}' no registrado");
         }
 
         try {
-
-            $user = $this->providers[$provider]->authorize($credentials);
+            $providerInstance = $this->providers[$provider];
+            error_log("Auth->signIn: Llamando a {$provider}->authorize()");
+            
+            $user = $providerInstance->authorize($credentials);
 
             if (!$user) {
-                $this->fireEvent('signinError', ['provider' => $provider]);
-                throw new Exception("No se pudo autenticar con el proveedor : $provider");
+                error_log("Auth->signIn: ERROR - authorize() retornó null");
+                $this->fireEvent('signInError', ['provider' => $provider, 'error' => 'Authorization failed']);
+                throw new Exception("No se pudo autenticar con el proveedor: $provider");
             }
 
+            error_log("Auth->signIn: User data recibido de provider: " . json_encode($user));
+
+            // Callback signIn
+            error_log("Auth->signIn: Ejecutando callback 'signIn'");
             $signInResult = $this->executeCallback('signIn', $user, $provider);
             if ($signInResult === false) {
+                error_log("Auth->signIn: ERROR - Callback signIn rechazó el inicio de sesión");
                 throw new Exception("Callback signIn rechazó el inicio de sesión");
             }
 
-            $user = $this->executeCallback('jwt', $user, $provider) ?? $user;
-            $session = $this->sessionManager->create($user);
-            $session = $this->executeCallback('session', $session, $user) ?? $session;
+            // Callback jwt
+            error_log("Auth->signIn: Ejecutando callback 'jwt'");
+            $jwtPayload = $this->executeCallback('jwt', [], $user, $provider, [], false);
+            
+            // Combinar datos originales del user con el payload del jwt
+            $finalUser = array_merge($user, $jwtPayload ?? []);
+            
+            error_log("Auth->signIn: Final user data (después de jwt callback): " . json_encode($finalUser));
 
-            $this->fireEvent('signInSuccess', ['user' => $user, 'provider' => $provider]);
+            // Crear sesión
+            error_log("Auth->signIn: Creando sesión");
+            $session = $this->sessionManager->create($finalUser);
+            
+            error_log("Auth->signIn: Sesión creada: " . json_encode($session));
 
+            // Callback session
+            error_log("Auth->signIn: Ejecutando callback 'session'");
+            $session = $this->executeCallback('session', $session, $finalUser) ?? $session;
+
+            error_log("Auth->signIn: Sesión final (después de session callback): " . json_encode($session));
+
+            $this->fireEvent('signInSuccess', ['user' => $finalUser, 'provider' => $provider]);
+
+            error_log("=== Auth->signIn() COMPLETADO EXITOSAMENTE ===");
+            
             return $session;
+            
         } catch (Exception $e) {
+            error_log("=== Auth->signIn() ERROR ===");
+            error_log("Auth->signIn: Exception: " . $e->getMessage());
+            error_log("Auth->signIn: Stack trace: " . $e->getTraceAsString());
+            
             $this->fireEvent('signInError', [
                 'provider' => $provider,
                 'error' => $e->getMessage()
@@ -181,8 +229,10 @@ class Auth
 
     public function signOut(): void
     {
+        error_log("Auth->signOut: Cerrando sesión");
         $this->fireEvent('signout');
         $this->sessionManager->destroy();
+        error_log("Auth->signOut: Sesión cerrada");
     }
 
     public function getSession(): ?array
@@ -190,9 +240,11 @@ class Auth
         $session = $this->sessionManager->get();
 
         if ($session) {
+            error_log("Auth->getSession: Sesión encontrada");
             return $this->executeCallback('session', $session, $session['user']) ?? $session;
         }
 
+        error_log("Auth->getSession: No hay sesión activa");
         return null;
     }
 
@@ -208,6 +260,7 @@ class Auth
 
     public function updateSession(array $data): array
     {
+        error_log("Auth->updateSession: Actualizando sesión con: " . json_encode($data));
         return $this->sessionManager->update($data);
     }
 

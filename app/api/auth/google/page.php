@@ -1,5 +1,5 @@
 <?php
-session_start();
+
 /**
  * GET /api/auth/google
  * Inicia el flujo de autenticación con Google OAuth 2.0
@@ -8,17 +8,22 @@ session_start();
 
 use Auth\Auth;
 use Core\Http\Http;
+use Core\Cookies\Cookie;
 
 Http::in(function ($req, $res) {
 
-    // Cargar la configuración de autenticación
+    error_log("=== /api/auth/google INICIADO ===");
+    
+    // NO llamar session_start() aquí - Auth lo hace en SessionManager
     $Auth = require __DIR__ . '/../../../../auth.config.php';
+    
+    error_log("/api/auth/google: Auth config cargado");
+    error_log("/api/auth/google: Session ID: " . session_id());
+    error_log("/api/auth/google: Session name: " . session_name());
+    error_log("/api/auth/google: Cookie params: " . json_encode(session_get_cookie_params()));
 
-    // La sesión es iniciada automáticamente por Auth -> SessionManager
-
-
-    // Verificar método HTTP
     if ($req->method() !== 'GET') {
+        error_log("/api/auth/google: ERROR - Método no permitido");
         $res->json([
             'error' => 'Method Not Allowed',
             'message' => 'Este endpoint solo acepta peticiones GET'
@@ -27,10 +32,10 @@ Http::in(function ($req, $res) {
     }
 
     try {
-        // Obtener el proveedor de Google
         $googleProvider = $Auth->getProvider('google');
 
         if (!$googleProvider) {
+            error_log("/api/auth/google: ERROR - Google Provider no configurado");
             $res->json([
                 'error' => 'Google Provider Not Configured',
                 'message' => 'Google OAuth 2.0 no está configurado en la aplicación'
@@ -38,28 +43,46 @@ Http::in(function ($req, $res) {
             return;
         }
 
-        // Guardar la URL de callback si se proporciona
+        error_log("/api/auth/google: Google Provider obtenido");
+
+        // Guardar URL de callback si se proporciona
         if (isset($_GET['callbackUrl'])) {
             $_SESSION['callbackUrl'] = $_GET['callbackUrl'];
+            error_log("/api/auth/google: callbackUrl guardado: " . $_GET['callbackUrl']);
         }
 
-        // Generar el state para CSRF protection
+        // Generar state para CSRF protection
         $state = bin2hex(random_bytes(16));
         $_SESSION['oauth_state'] = $state;
 
-        // Log para debug (puedes comentar después)
-        error_log("OAuth state generado y guardado: $state");
-        error_log("Session ID: " . session_id());
+        // WORKAROUND: También guardar en una cookie separada por si la sesión no persiste
+        // Usar Cookie::response() para establecer la cookie
+        $cookies = Cookie::response();
+        $cookies->set('oauth_state_backup', $state, [
+            'expires' => time() + 600,  // 10 minutos
+            'path' => '/',
+            'httpOnly' => true,
+            'sameSite' => 'Lax'
+        ]);
 
-        // Obtener la URL de autorización de Google
-        // IMPORTANTE: Pasar el state generado a getAuthorizationUrl
-        // El proveedor NO debe generar otro state internamente si ya se lo pasamos
+        error_log("/api/auth/google: State generado y guardado: {$state}");
+        error_log("/api/auth/google: State guardado en \$_SESSION['oauth_state']: " . $_SESSION['oauth_state']);
+        error_log("/api/auth/google: State guardado también en cookie oauth_state_backup usando Cookie::response()");
+        error_log("/api/auth/google: Todas las keys de \$_SESSION: " . json_encode(array_keys($_SESSION)));
+
+        // Obtener URL de autorización (el provider también establece el state backup)
         $authUrl = $googleProvider->getAuthorizationUrl($state);
-        error_log("Redirigir al usuario a Google :" . $authUrl);
-        // Redirigir al usuario a Google
+        
+        error_log("/api/auth/google: URL de autorización obtenida");
+        error_log("=== /api/auth/google REDIRIGIENDO A GOOGLE ===");
+        
         $res->redirect($authUrl);
+        
     } catch (\Exception $e) {
-        error_log("Error en /api/auth/google: " . $e->getMessage());
+        error_log("=== /api/auth/google ERROR ===");
+        error_log("/api/auth/google: Exception: " . $e->getMessage());
+        error_log("/api/auth/google: Stack trace: " . $e->getTraceAsString());
+        
         $res->json([
             'error' => 'Error al iniciar autenticación con Google',
             'message' => $e->getMessage()
