@@ -23,10 +23,7 @@ class Suspense extends HtmlElement
      */
     public function __construct($fallback, SuspenseAction $action)
     {
-        // 1️⃣ Inicializamos el padre con el fallback como child
         parent::__construct($fallback);
-
-        // 2️⃣ Guardamos acción
         $this->action = $action;
         $this->hash = $action->getHash();
         $this->actionName = $action->getName() ?? '';

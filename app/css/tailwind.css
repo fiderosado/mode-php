@@ -43,9 +43,15 @@
   --text-2xl--line-height: calc(2 / 1.5);
   --text-3xl: 1.875rem;
   --text-3xl--line-height: calc(2.25 / 1.875);
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
   --font-weight-bold: 700;
+  --radius-lg: .5rem;
   --radius-xl: .75rem;
+  --radius-2xl: 1rem;
   --animate-bounce: bounce 1s infinite;
+  --default-transition-duration: .15s;
+  --default-transition-timing-function: cubic-bezier(.4, 0, .2, 1);
   --default-font-family: var(--font-sans);
   --default-mono-font-family: var(--font-mono);
 }
@@ -194,8 +200,14 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 .mt-4 {
   margin-top: calc(var(--spacing) * 4);
 }
+.mb-2 {
+  margin-bottom: calc(var(--spacing) * 2);
+}
 .mb-6 {
   margin-bottom: calc(var(--spacing) * 6);
+}
+.mb-8 {
+  margin-bottom: calc(var(--spacing) * 8);
 }
 .\!flex {
   display: flex !important;
@@ -209,14 +221,29 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 .h-4 {
   height: calc(var(--spacing) * 4);
 }
+.h-5 {
+  height: calc(var(--spacing) * 5);
+}
+.h-6 {
+  height: calc(var(--spacing) * 6);
+}
 .min-h-screen {
   min-height: 100vh;
 }
 .w-4 {
   width: calc(var(--spacing) * 4);
 }
+.w-5 {
+  width: calc(var(--spacing) * 5);
+}
+.w-auto {
+  width: auto;
+}
 .w-full {
   width: 100%;
+}
+.max-w-\[420px\] {
+  max-width: 420px;
 }
 .max-w-md {
   max-width: var(--container-md);
@@ -236,6 +263,12 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 .items-center {
   align-items: center;
 }
+.justify-center {
+  justify-content: center;
+}
+.gap-3 {
+  gap: calc(var(--spacing) * 3);
+}
 :where(.space-y-2 > :not(:last-child)) {
   --tw-space-y-reverse: 0;
   margin-block-start: calc(calc(var(--spacing) * 2) * var(--tw-space-y-reverse));
@@ -249,8 +282,14 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 .rounded {
   border-radius: var(--radius);
 }
+.rounded-2xl {
+  border-radius: var(--radius-2xl);
+}
 .rounded-full {
   border-radius: 3.40282e38px;
+}
+.rounded-lg {
+  border-radius: var(--radius-lg);
 }
 .rounded-xl {
   border-radius: var(--radius-xl);
@@ -263,11 +302,17 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
   border-left-style: var(--tw-border-style);
   border-left-width: 4px;
 }
+.border-\[\#dadce0\] {
+  border-color: #dadce0;
+}
 .border-blue-500 {
   border-color: var(--color-blue-500);
 }
 .border-yellow-400 {
   border-color: var(--color-yellow-400);
+}
+.bg-\[\#f8f9fa\] {
+  background-color: #f8f9fa;
 }
 .bg-black {
   background-color: var(--color-black);
@@ -286,6 +331,9 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 }
 .bg-red-500 {
   background-color: var(--color-red-500);
+}
+.bg-white {
+  background-color: var(--color-white);
 }
 .bg-yellow-100 {
   background-color: var(--color-yellow-100);
@@ -308,8 +356,23 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 .px-4 {
   padding-inline: calc(var(--spacing) * 4);
 }
+.px-6 {
+  padding-inline: calc(var(--spacing) * 6);
+}
+.px-10 {
+  padding-inline: calc(var(--spacing) * 10);
+}
 .py-2 {
   padding-block: calc(var(--spacing) * 2);
+}
+.py-3 {
+  padding-block: calc(var(--spacing) * 3);
+}
+.py-12 {
+  padding-block: calc(var(--spacing) * 12);
+}
+.text-center {
+  text-align: center;
 }
 .text-2xl {
   font-size: var(--text-2xl);
@@ -327,15 +390,43 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
   --tw-font-weight: var(--font-weight-bold);
   font-weight: var(--font-weight-bold);
 }
+.font-medium {
+  --tw-font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-medium);
+}
+.font-normal {
+  --tw-font-weight: var(--font-weight-normal);
+  font-weight: var(--font-weight-normal);
+}
+.text-\[\#1a73e8\] {
+  color: #1a73e8;
+}
+.text-\[\#3c4043\] {
+  color: #3c4043;
+}
+.text-\[\#5f6368\] {
+  color: #5f6368;
+}
+.text-\[\#202124\] {
+  color: #202124;
+}
 .text-gray-600 {
   color: var(--color-gray-600);
 }
 .text-white {
   color: var(--color-white);
 }
-.shadow {
+.no-underline {
+  text-decoration-line: none;
+}
+.shadow, .shadow-sm {
   --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, #0000001a), 0 1px 2px -1px var(--tw-shadow-color, #0000001a);
   box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+}
+.transition-all {
+  transition-property: all;
+  transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+  transition-duration: var(--tw-duration, var(--default-transition-duration));
 }
 @keyframes bounce {
   0%, 100% {
@@ -350,6 +441,21 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 @supports (not (-webkit-appearance: -apple-pay-button))  or (contain-intrinsic-size: 1px) {
   ::placeholder {
     color: color-mix(in oklab, currentcolor 50%, transparent);
+  }
+}
+@media (hover: hover) {
+  .hover\:border-\[\#d2e3fc\]:hover {
+    border-color: #d2e3fc;
+  }
+  .hover\:bg-\[\#f8fbff\]:hover {
+    background-color: #f8fbff;
+  }
+  .hover\:underline:hover {
+    text-decoration-line: underline;
+  }
+  .hover\:shadow-sm:hover {
+    --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, #0000001a), 0 1px 2px -1px var(--tw-shadow-color, #0000001a);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
   }
 }
 @property --tw-space-y-reverse {

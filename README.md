@@ -1,335 +1,273 @@
-# mode-php
+# 🔐 Auth para PHP - Sistema de Autenticación Profesional
 
-Un framework PHP moderno y minimalista enfocado en la **máxima natividad**, **reactividad** y **velocidad**. Mode-PHP elimina las abstracciones innecesarias para ofrecer una experiencia de desarrollo fluida, directa y altamente performante.
+> Un sistema de autenticación moderno para PHP con JWT, Cookies y Sesiones.
 
-## 🎯 Filosofía del Proyecto
+## 🎯 Características
 
-Mode-PHP nace de la necesidad de un framework que sea:
+- ✅ **JWT + Cookies + Sesiones** - Triple seguridad
+- ✅ **Multiple Providers** - Google OAuth, Credentials, Extensible
+- ✅ **Callbacks Personalizables** - signIn, jwt, session, redirect
+- ✅ **Sistema de Eventos** - Logging y tracking
+- ✅ **Middleware de Rutas** - Protección simple
+- ✅ **API REST** - 5 endpoints listos para usar
+- ✅ **Helpers Globales** - useSession(), useUser(), etc.
+- ✅ **Documentación Completa** - 2000+ líneas
 
-- **🔥 Nativo**: Sin abstracciones pesadas. PHP puro y directo donde más importa.
-- **⚡ Rápido**: Arquitectura ligera optimizada para velocidad máxima.
-- **♻️ Reactivo**: Integración perfecta con SerJS para UI reactivas sin complejidad.
-- **🧩 Modular**: Componentes reutilizables y estructura clara basada en Next.js.
-- **🎨 Moderno**: Tailwind CSS v4 integrado para estilos modernos y eficientes.
+## 📦 Instalación
 
-## 🏗️ Arquitectura
+### 1. Requisitos
+- PHP 8.0+
+- Composer
 
-### Sistema de Routing File-Based
-
-Inspirado en Next.js, mode-php utiliza un sistema de routing basado en la estructura de archivos. Simple, predecible y poderoso:
-
-```
-app/
-├── page.php                 # Ruta: /
-├── blog/
-│   ├── page.php            # Ruta: /blog
-│   └── [slug]/
-│       └── page.php        # Ruta: /blog/:slug (dinámico)
-├── api/
-│   └── auth/
-│       └── page.php        # Ruta: /api/auth
-└── layout.php              # Layout compartido
-```
-
-### Características Clave
-
-**📁 File-System Routing**
-- Cada `page.php` define una ruta automáticamente
-- Soporte para rutas dinámicas con `[param]`
-- Layouts anidados con cascada automática
-- Sin configuración manual de rutas
-
-**🎨 Componentes Nativos**
-- Sistema de componentes PHP en `components/`
-- Reutilización sin overhead
-- Props y composición simple
-- HTML semántico generado
-
-**⚛️ Reactividad con SerJS**
-- Estados reactivos (`useState`)
-- Efectos secundarios (`useEffect`)
-- Referencias al DOM (`useRef`)
-- Memoización (`useMemo`)
-- Render dinámico sin Virtual DOM
-
-**🎯 Zero Config**
-- Sin archivos de configuración complejos
-- Convención sobre configuración
-- Auto-discovery de rutas y layouts
-- Tailwind CSS pre-configurado
-
-## 🚀 Inicio Rápido
-
-### Instalación
+### 2. Instalar dependencias
 
 ```bash
-git clone https://github.com/tu-usuario/mode-php.git
-cd mode-php
-composer install
+composer require firebase/php-jwt
 ```
 
-### Configuración
+### 3. Variables de entorno
 
-1. Copia el archivo `.env`:
-```bash
-cp .env.example .env
+Crea archivo `.env` en la raíz:
+
+```env
+AUTH_SECRET=tu-secret-seguro-minimo-32-caracteres
+AUTH_GOOGLE_ID=your-google-client-id
+AUTH_GOOGLE_SECRET=your-google-client-secret
+APP_URL=http://localhost:3000
 ```
 
-2. Configura tu servidor web (Apache/Nginx) apuntando a `index.php`
+### 4. Copiar configuración
 
-3. ¡Listo! Accede a `http://localhost`
+El archivo `auth.config.php` ya está en la raíz del proyecto.
 
-## 📖 Guía de Uso
+## 🚀 Uso rápido
 
-### Crear una Página Simple
+### Proteger una página
 
 ```php
-<!-- app/page.php -->
-<div class="container mx-auto p-8">
-    <h1 class="text-4xl font-bold">¡Hola Mode-PHP!</h1>
-    <p class="text-gray-600">Framework nativo y reactivo</p>
-</div>
-```
-
-### Crear una Ruta Dinámica
-
-```php
-<!-- app/blog/[slug]/page.php -->
 <?php
-// Los parámetros están disponibles en $params
-$slug = $params['slug'] ?? 'default';
+$Auth = require __DIR__ . '/auth.config.php';
+$auth = new AuthMiddleware($Auth->getSessionManager());
+$auth->require(); // Redirige a login si no autenticado
+
+$user = $Auth->getUser();
+echo "Bienvenido " . $user['name'];
 ?>
-
-<article class="prose lg:prose-xl">
-    <h1>Post: <?= htmlspecialchars($slug) ?></h1>
-    <p>Contenido del post...</p>
-</article>
 ```
 
-### Usar Layouts
+### Proteger una API
 
 ```php
-<!-- app/layout.php -->
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mode-PHP</title>
-    <link href="/app/css/tailwind.css" rel="stylesheet">
-    <script src="/SerJS/SerJS.js"></script>
-</head>
-<body class="bg-gray-50">
-    <nav class="bg-white shadow">
-        <!-- Navegación -->
-    </nav>
-    
-    <main>
-        <?php require $GLOBALS['page']; ?>
-    </main>
-    
-    <footer class="mt-auto">
-        <!-- Footer -->
-    </footer>
-</body>
-</html>
-```
-
-### Componentes Reutilizables
-
-```php
-<!-- components/header/StandardHeader.php -->
 <?php
-namespace Components\Header;
+$auth = new AuthMiddleware(
+    $Auth->getSessionManager(), 
+    ['isApi' => true]
+);
+$auth->require(); // Retorna JSON 401 si no autenticado
 
-class StandardHeader {
-    public static function render($title, $subtitle = '') {
-        ?>
-        <header class="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-8">
-            <h1 class="text-5xl font-bold"><?= htmlspecialchars($title) ?></h1>
-            <?php if ($subtitle): ?>
-                <p class="text-xl mt-2"><?= htmlspecialchars($subtitle) ?></p>
-            <?php endif; ?>
-        </header>
-        <?php
-    }
+header('Content-Type: application/json');
+echo json_encode(['user' => $Auth->getUser()]);
+?>
+```
+
+### Usar helpers
+
+```php
+<?php
+use function Auth\isAuthenticated;
+use function Auth\useUser;
+
+if (isAuthenticated()) {
+    echo "Usuario: " . useUser()['email'];
 }
-```
-
-**Uso:**
-```php
-<?php
-use Components\Header\StandardHeader;
-
-StandardHeader::render('Mi Título', 'Subtítulo opcional');
 ?>
 ```
 
-### Reactividad con SerJS
+## 📚 Documentación
 
-```php
-<!-- app/dashboard/page.php -->
-<script src="/SerJS/SerJS.js"></script>
+### Guías principales
 
-<div id="counter" class="p-8">
-    Contador: ${count}
-</div>
+- **[AUTH_DOCUMENTATION.md](./AUTH_DOCUMENTATION.md)** - Documentación técnica completa
+- **[QUICKSTART.md](./QUICKSTART.md)** - Inicio rápido con ejemplos
+- **[ARQUITECTURA.md](./ARQUITECTURA.md)** - Diagramas y flujos
+- **[EJEMPLOS_PRACTICOS.md](./EJEMPLOS_PRACTICOS.md)** - 10 ejemplos listos para usar
+- **[CHECKLIST.md](./CHECKLIST.md)** - Lista de implementación
 
-<button id="btnIncrement" class="bg-blue-500 text-white px-4 py-2 rounded">
-    Incrementar
-</button>
+## 🔗 API Endpoints
 
-<script>
-    const { useRef, useState, useEffect, reRender } = SerJS;
-    
-    // Estado reactivo
-    const [count, setCount] = useState(0);
-    
-    // Referencias
-    const counterRef = useRef('counter');
-    const btnRef = useRef('btnIncrement');
-    
-    // Efecto reactivo
-    useEffect(() => {
-        reRender(counterRef, { count: count.current });
-    }, [count]);
-    
-    // Evento
-    btnRef.onClick(() => {
-        setCount(prev => prev + 1);
-    });
-</script>
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `POST` | `/api/auth/signin` | Iniciar sesión |
+| `POST` | `/api/auth/signout` | Cerrar sesión |
+| `GET` | `/api/auth/session` | Obtener sesión |
+| `GET` | `/api/auth/providers` | Listar proveedores |
+| `GET` | `/api/auth/callback/google` | Google OAuth callback |
+
+## 💻 Ejemplos
+
+### Signin con email/password
+
+```javascript
+const response = await fetch('/api/auth/signin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        provider: 'credentials',
+        credentials: { 
+            email: 'user@example.com',
+            password: 'secret'
+        }
+    })
+});
 ```
 
-## 🛠️ Estructura del Proyecto
+### Obtener sesión
 
-```
-mode-php/
-├── app/                    # Aplicación (file-based routing)
-│   ├── page.php           # Página principal
-│   ├── layout.php         # Layout raíz
-│   ├── blog/              # Ruta /blog
-│   │   ├── page.php
-│   │   └── [slug]/
-│   │       └── page.php   # Ruta dinámica
-│   ├── api/               # API routes
-│   └── css/               # CSS compilado
-│
-├── components/            # Componentes reutilizables
-│   ├── header/
-│   │   └── StandardHeader.php
-│   └── navbar/
-│
-├── core/                  # Núcleo del framework
-│   ├── App.php           # Clase App principal
-│   ├── Router.php        # Sistema de routing
-│   ├── Resolver.php      # Resolución de rutas
-│   ├── Render.php        # Sistema de renderizado
-│   ├── Html/             # Generadores HTML nativos
-│   ├── Http/             # Utilidades HTTP
-│   ├── Security/         # JWT y seguridad
-│   └── Tailwindcss/      # Integración Tailwind
-│
-├── SerJS/                 # Framework reactivo JS
-│   ├── SerJS.js          # Librería principal
-│   ├── README.md         # Documentación SerJS
-│   └── core/
-│
-├── vendor/                # Dependencias Composer
-├── .env                   # Variables de entorno
-├── .htaccess             # Configuración Apache
-├── composer.json         # Dependencias PHP
-├── index.php             # Entry point
-└── README.md             # Este archivo
+```javascript
+const response = await fetch('/api/auth/session');
+const { session } = await response.json();
 ```
 
-## 📦 Dependencias
+### Cerrar sesión
 
-### PHP Dependencies (Composer)
-- **nesbot/carbon**: Manejo avanzado de fechas
-- **vlucas/phpdotenv**: Variables de entorno
-- **firebase/php-jwt**: JSON Web Tokens
-- **tailwindphp/tailwindphp**: Compilador Tailwind CSS
+```javascript
+await fetch('/api/auth/signout', { method: 'POST' });
+```
 
-### JavaScript Dependencies
-- **SerJS**: Framework reactivo nativo (incluido)
+## 🏗️ Estructura
 
-## 🎨 Tailwind CSS v4
+```
+Auth/
+├── Auth.php              # Clase principal
+├── SessionManager.php       # Gestión de sesiones
+├── TokenManager.php         # Gestión de JWT
+├── Callbacks.php            # Sistema de callbacks
+├── Helpers.php              # Funciones auxiliares
+├── AuthMiddleware.php    # Middleware
+└── Providers/
+    ├── Provider.php         # Interface
+    ├── Google.php           # Google OAuth
+    └── Credentials.php      # Email + Password
 
-Mode-PHP incluye Tailwind CSS v4 pre-configurado:
-
-```bash
-# Compilar CSS (modo desarrollo)
-./vendor/bin/tailwindphp --input=input.css --output=app/css/tailwind.css --watch
-
-# Compilar CSS (producción)
-./vendor/bin/tailwindphp --input=input.css --output=app/css/tailwind.css --minify
+auth.config.php           # Configuración centralizada
 ```
 
 ## 🔐 Seguridad
 
-- **JWT**: Autenticación basada en tokens
-- **CSRF**: Protección incluida
-- **XSS**: Escapado automático en componentes
-- **SQL Injection**: Preparación de consultas
-- **Environment Variables**: Configuración sensible en `.env`
+- JWT firmados con HS256
+- Cookies con HttpOnly, Secure, SameSite=Lax
+- Validación de estado (CSRF protection)
+- Hashing de contraseñas con PASSWORD_DEFAULT
+- Expiración automática de tokens
 
-## 🌟 Ventajas vs Otros Frameworks
+## 🛠️ Configuración
 
-| Característica | Mode-PHP | Laravel | Symfony |
-|---------------|----------|---------|---------|
-| **Velocidad** | ⚡ Ultra rápido | Medio | Medio |
-| **Curva de aprendizaje** | 📉 Baja | Alta | Muy Alta |
-| **File-based routing** | ✅ | ❌ | ❌ |
-| **Reactividad nativa** | ✅ (SerJS) | ❌ | ❌ |
-| **Zero config** | ✅ | ⚠️ Parcial | ❌ |
-| **Modularidad** | ✅ | ✅ | ✅ |
-| **Overhead** | 🪶 Mínimo | Medio | Alto |
+En `auth.config.php` puedes personalizar:
 
-## 🚦 Roadmap
+```php
+'callbacks' => [
+    'signIn' => function(array $user) {
+        // Validación personalizada
+        return true; // o false para denegar
+    },
+    'jwt' => function(array $token) {
+        // Personalizar JWT
+        return $token;
+    }
+],
+'events' => [
+    'signin' => function($message) {
+        // Logging
+    }
+]
+```
 
-- [x] Sistema de routing file-based
-- [x] Integración SerJS
-- [x] Tailwind CSS v4
-- [x] Componentes reutilizables
-- [x] Layouts anidados
-- [ ] Middleware system
-- [ ] API REST automática
-- [ ] Database ORM ligero
-- [ ] Hot reload en desarrollo
-- [ ] CLI tools
-- [ ] Testing integrado
-- [ ] Deploy automation
+## 📋 Helpers disponibles
 
-## 🤝 Contribuir
+```php
+useSession()              // Obtener sesión actual
+useUser()                 // Obtener usuario
+useToken()                // Obtener JWT token
+isAuthenticated()         // ¿Está autenticado?
+requireAuth()             // Requerir autenticación
+redirectToSignIn()        // Redirigir a login
+getAuthStatus()           // Estado como JSON
+```
 
-Las contribuciones son bienvenidas. Por favor:
+## 🎯 Crear proveedor personalizado
 
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add: Amazing Feature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
+```php
+class CustomProvider implements Provider {
+    public function authorize(array $credentials): ?array {
+        // Tu lógica
+        return ['id' => '123', 'email' => 'user@example.com'];
+    }
+    
+    public function handleCallback(): void {}
+    public function getName(): string { return 'Custom'; }
+    public function getType(): string { return 'oauth'; }
+    public function getConfig(): array { return []; }
+}
 
-## 📄 Licencia
+// Registrarlo:
+$Auth->registerProvider('custom', new CustomProvider());
+```
 
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+## 📊 Flujo de autenticación
 
-## 👨‍💻 Autor
+```
+1. Usuario envía credenciales a /api/auth/signin
+2. Proveedor valida credenciales
+3. Callback 'signIn' valida el login
+4. Se genera JWT token
+5. Se crea sesión en $_SESSION
+6. Token se almacena en cookie HttpOnly
+7. Se retorna sesión al cliente
+```
 
-**Fidel Remedios Rosado**
-- Email: fiderosado@gmail.com
-- GitHub: [@fiderosado](https://github.com/fiderosado)
+## 🐛 Troubleshooting
 
-## 🙏 Agradecimientos
+### Token no persiste
+Verificar que `session_start()` se llama antes
 
-- Next.js por la inspiración en el routing
-- Tailwind CSS por el sistema de utilidades
-- React Hooks por los conceptos de reactividad
-- La comunidad PHP por su continuo apoyo
+### Google OAuth falla
+Verificar CLIENT_ID, CLIENT_SECRET y redirect URI
+
+### Token expirado rápido
+Aumentar `maxAge` en configuración
+
+Ver [CHECKLIST.md](./CHECKLIST.md) para más tips.
+
+## 📈 Próximos pasos
+
+1. ✅ Instalar dependencias: `composer require firebase/php-jwt`
+2. ✅ Crear `.env` con variables
+3. ✅ Integrar con tu BD
+4. ✅ Configurar Google OAuth
+5. ✅ Personalizar callbacks
+6. ✅ Proteger tus rutas
+
+## 🎓 Aprende más
+
+- Ver [AUTH_DOCUMENTATION.md](./AUTH_DOCUMENTATION.md) para documentación técnica
+- Ver [EJEMPLOS_PRACTICOS.md](./EJEMPLOS_PRACTICOS.md) para 10 ejemplos completos
+- Ver [ARQUITECTURA.md](./ARQUITECTURA.md) para diagramas detallados
+
+## 📝 Licencia
+
+MIT - Úsalo libremente en tus proyectos
+
+## 🤝 Soporte
+
+Si necesitas ayuda:
+1. Revisa la documentación en `AUTH_DOCUMENTATION.md`
+2. Consulta los ejemplos en `EJEMPLOS_PRACTICOS.md`
+3. Revisa el checklist en `CHECKLIST.md`
 
 ---
 
-**Mode-PHP**: *Nativo. Rápido. Reactivo. Sin complicaciones.*
+**¡Tu sistema Auth para PHP está 100% operacional!** 🚀
 
-⭐ Si te gusta el proyecto, ¡deja una estrella en GitHub!
+Instalación: `composer require firebase/php-jwt`
+
+Documentación: Ver archivos `.md` en la raíz del proyecto

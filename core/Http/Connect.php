@@ -166,7 +166,7 @@ final class Connect
     private function handleResponse(array $response, string $method, array $config): array
     {
         if ($response['status'] === 204 && $method === 'DELETE') {
-            return ['success' => ['message' => 'Registro Eliminado...']];
+            return ['success' => ['message' => 'Eliminado...']];
         }
 
         $data = json_decode($response['body'], true);

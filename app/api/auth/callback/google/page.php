@@ -1,4 +1,5 @@
 <?php
+session_start();
 
 /**
  * GET /api/auth/callback/google
@@ -8,19 +9,18 @@
 
 use Auth\Auth;
 use Core\Http\Http;
+use Core\Security\Jwt;
+use Core\Utils\Console;
 
 Http::in(function ($req, $res) {
 
-    // CRÍTICO: Iniciar sesión PRIMERO, antes de cualquier otra cosa
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+    error_log("Recibiendo callback desde Google :");
 
-    // Cargar la configuración de autenticación
     $Auth = require __DIR__ . '/../../../../../auth.config.php';
 
     // Verificar que sea una petición GET
     if ($req->method() !== 'GET') {
+
         $res->json([
             'error' => 'Method Not Allowed',
             'message' => 'Este endpoint solo acepta peticiones GET'
@@ -36,38 +36,35 @@ Http::in(function ($req, $res) {
             return;
         }
 
-        // Obtener el código de autorización
         $code = $_GET['code'] ?? null;
         $state = $_GET['state'] ?? null;
-
-        if (!$code) {
-            $errorMsg = urlencode('Código de autorización no recibido');
-            $res->redirect("/auth/error?error=$errorMsg&provider=google");
-            return;
-        }
 
         // Log para debug
         error_log("State recibido de Google: " . ($state ?? 'NULL'));
         error_log("State guardado en sesión: " . ($_SESSION['oauth_state'] ?? 'NULL'));
+        error_log("Code recibido: " . ($code ?? 'NULL'));
+        error_log("State recibido: " . ($state ?? 'NULL'));
         error_log("Session ID en callback: " . session_id());
 
-        // Verificar el state (CSRF protection)
-        $savedState = $_SESSION['oauth_state'] ?? null;
-
-        if (!$state || !$savedState || $state !== $savedState) {
-            error_log("CSRF MISMATCH - State recibido: '$state', State guardado: '$savedState'");
-            $errorMsg = urlencode('Estado de OAuth inválido - posible ataque CSRF');
-            $errorCode = 'csrf_mismatch';
-            $res->redirect("/auth/error?error=$errorMsg&code=$errorCode&provider=google&debug_state_received=" . urlencode($state ?? 'null') . "&debug_state_saved=" . urlencode($savedState ?? 'null'));
+        if (!$code || !$state) {
+            $errorMsg = 'Invalid code or state';
+            error_log("Código o estado inválido: Code: $code, State: $state");
+            $res->redirect("/auth/error?error=$errorMsg&provider=google&code=400");
             return;
         }
 
-        // Limpiar el state usado
-        unset($_SESSION['oauth_state']);
+        if (
+            !isset($_SESSION['oauth_state']) ||
+            !isset($_GET['state']) ||
+            $_GET['state'] !== $_SESSION['oauth_state']
+        ) {
+            $errorMsg = 'Invalid state';
+            error_log("CSRF MISMATCH - State recibido: '{$_GET['state']}', State guardado: '{$_SESSION['oauth_state']}'");
+            $res->redirect("/auth/error?error=$errorMsg&provider=google&code=401");
+        }
 
         // Obtener el proveedor de Google
         $googleProvider = $Auth->getProvider('google');
-
         if (!$googleProvider) {
             $errorMsg = urlencode('Google provider no configurado');
             $res->redirect("/auth/error?error=$errorMsg&provider=google");
@@ -86,11 +83,44 @@ Http::in(function ($req, $res) {
             return;
         }
 
-        // Crear la sesión usando Auth
-        $session = $Auth->signIn('google', ['code' => $code, 'state' => $state]);
+        error_log("Google user data: " . json_encode($user));
+
+
+        $jwt = Jwt::in([
+            'secret' => $_ENV['JWT_SECRET_SIGN'],
+            'issuer' => 'dev.anfitrion.us',
+        ])
+            ->encode([
+                'sub' => $user['sub'],
+                'email' => $user['email'],
+                'name' => $user['name'],
+                'image' => $user['picture'],
+                'provider' => 'google'
+            ], 3600);
+
+
+        error_log("El token generado es: " . $jwt);
+
+        // Registrar cookie igual que NextAuth
+        $cookieName = 'auth.session-token';
+        //'__Secure-next-auth.session-token';
+        setcookie(
+            $cookieName,
+            $jwt,
+            [
+                'expires'  => time() + 3600,
+                'path'     => '/',
+                'domain'   => 'dev.anfitrion.us',
+                'secure'   => false,
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ]
+        );
+
+        unset($_SESSION['oauth_state']);
 
         // Obtener la URL de redirección guardada o usar dashboard por defecto
-        $callbackUrl = $_SESSION['callbackUrl'] ?? '/dashboard';
+        $callbackUrl = $_SESSION['callbackUrl'] ?? '/';
         unset($_SESSION['callbackUrl']);
 
         // Ejecutar el callback de redirect si está configurado
@@ -103,7 +133,6 @@ Http::in(function ($req, $res) {
 
         // Redirigir al usuario
         $res->redirect($callbackUrl);
-
     } catch (\Exception $e) {
         // Log del error con detalles
         error_log("Error en callback de Google: " . $e->getMessage());
