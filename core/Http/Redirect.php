@@ -22,6 +22,7 @@ class Redirect
      */
     public static function to(string $url, int $statusCode = 302): self
     {
+        error_log("Esoy redirigiendo a :" . $url . "|" . $statusCode);
         return new self($url, $statusCode);
     }
 

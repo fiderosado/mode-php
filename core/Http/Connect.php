@@ -13,14 +13,15 @@ final class Connect
         'token' => '',
         'timeout' => 30,
         'max_redirects' => 5,
+        'follow' => false,
     ];
 
     private array $defaultHeaders = [];
 
     private function __construct()
     {
-        $this->config['base_url'] = $_ENV['API_URL'] ?? getenv('API_URL') ?? '';
-        $this->config['token'] = $_ENV['API_FULL_ACCESS_TOKEN'] ?? getenv('API_FULL_ACCESS_TOKEN') ?? '';
+        // $this->config['base_url'] = $_ENV['API_URL'] ?? getenv('API_URL') ?? '';
+        //$this->config['token'] = $_ENV['API_FULL_ACCESS_TOKEN'] ?? getenv('API_FULL_ACCESS_TOKEN') ?? '';
 
         $this->defaultHeaders = [
             'Accept' => 'application/json',
@@ -43,14 +44,20 @@ final class Connect
         array $payload = [],
         array $config = []
     ): array {
+
         $self = self::getInstance();
         $method = strtoupper($method);
+
+        if (!empty($config['base_url'])) {
+            $self->config['base_url'] = $config['base_url'];
+        }
 
         if (!$url || !isset(self::methods()[$method])) {
             return self::error('Unsupported endpoint or method', $method, $url);
         }
 
         try {
+            error_log('Connect: Url: ' . $url . '|' . $method . '|' . json_encode($payload));
             $response = $self->execute(
                 $self->resolveUrl($url),
                 $method,
@@ -127,15 +134,31 @@ final class Connect
         array $headers,
         array $config
     ): array {
+
+        $responseHeaders = [];
         $ch = curl_init($url);
 
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CUSTOMREQUEST => $method,
-            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_FOLLOWLOCATION => $this->config['follow'],
             CURLOPT_MAXREDIRS => $this->config['max_redirects'],
             CURLOPT_TIMEOUT => $config['timeout'] ?? $this->config['timeout'],
             CURLOPT_HTTPHEADER => $this->headersToArray($headers),
+            //CURLOPT_HEADER => true,
+            CURLOPT_HEADERFUNCTION => function ($curl, $header) use (&$responseHeaders) {
+                $length = strlen($header);
+                $header = trim($header);
+                if ($header === '' || str_starts_with($header, 'HTTP/')) {
+                    return $length;
+                }
+                if (!str_contains($header, ':')) {
+                    return $length;
+                }
+                [$key, $value] = explode(':', $header, 2);
+                $responseHeaders[strtolower(trim($key))] = trim($value);
+                return $length;
+            }
         ]);
 
         if ($payload && $method !== 'GET') {
@@ -144,14 +167,30 @@ final class Connect
 
         $body = curl_exec($ch);
 
+        error_log("esto es lo que viene de la peticion: " . $body);
+
         if ($body === false) {
             throw new Exception('cURL Error: ' . curl_error($ch));
         }
 
         $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        // capturar redirect detectado por cURL
+        $redirectUrl = curl_getinfo($ch, CURLINFO_REDIRECT_URL);
+
         curl_close($ch);
 
-        return compact('body', 'status');
+        if ($redirectUrl) {
+            $responseHeaders['location'] = $redirectUrl;
+        }
+
+        return [
+            'body' => $body,
+            'status' => $status,
+            'headers' => $responseHeaders
+        ];
+
+        //return compact('body', 'status');
     }
 
     private function headersToArray(array $headers): array
@@ -165,6 +204,17 @@ final class Connect
 
     private function handleResponse(array $response, string $method, array $config): array
     {
+
+        if ($response['status'] >= 300 && $response['status'] < 400) {
+            $location = $response['headers']['location'] ?? null;
+            return [
+                'redirect' => [
+                    'status' => $response['status'],
+                    'location' => $location
+                ]
+            ];
+        }
+
         if ($response['status'] === 204 && $method === 'DELETE') {
             return ['success' => ['message' => 'Eliminado...']];
         }

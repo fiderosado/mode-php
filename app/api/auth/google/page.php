@@ -13,10 +13,10 @@ use Core\Cookies\Cookie;
 Http::in(function ($req, $res) {
 
     error_log("=== /api/auth/google INICIADO ===");
-    
+
     // NO llamar session_start() aquí - Auth lo hace en SessionManager
     $Auth = require __DIR__ . '/../../../../auth.config.php';
-    
+
     error_log("/api/auth/google: Auth config cargado");
     error_log("/api/auth/google: Session ID: " . session_id());
     error_log("/api/auth/google: Session name: " . session_name());
@@ -72,17 +72,17 @@ Http::in(function ($req, $res) {
 
         // Obtener URL de autorización (el provider también establece el state backup)
         $authUrl = $googleProvider->getAuthorizationUrl($state);
-        
+
         error_log("/api/auth/google: URL de autorización obtenida");
         error_log("=== /api/auth/google REDIRIGIENDO A GOOGLE ===");
-        
+
         $res->redirect($authUrl);
-        
+
     } catch (\Exception $e) {
         error_log("=== /api/auth/google ERROR ===");
         error_log("/api/auth/google: Exception: " . $e->getMessage());
         error_log("/api/auth/google: Stack trace: " . $e->getTraceAsString());
-        
+
         $res->json([
             'error' => 'Error al iniciar autenticación con Google',
             'message' => $e->getMessage()

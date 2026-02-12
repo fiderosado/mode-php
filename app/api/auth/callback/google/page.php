@@ -104,7 +104,7 @@ Http::in(function ($req, $res) {
         error_log("Callback: Auth->signIn() completado exitosamente");
         error_log("Callback: Session retornada: " . json_encode($session));
         error_log("Callback: Verificando si la cookie se estableció...");
-        
+
         // Verificar headers enviados
         if (headers_sent($file, $line)) {
             error_log("Callback: ⚠️ WARNING - Headers ya enviados desde {$file}:{$line}");
@@ -118,7 +118,7 @@ Http::in(function ($req, $res) {
 
         // Obtener URL de redirección
         $callbackUrl = $_SESSION['callbackUrl'] ?? '/';
-        unset($_SESSION['callbackUrl']);
+
         error_log("Callback: callbackUrl: {$callbackUrl}");
 
         // Ejecutar callback de redirect si existe
@@ -132,7 +132,10 @@ Http::in(function ($req, $res) {
         error_log("Callback: Redirigiendo a: {$callbackUrl}");
         error_log("=== CALLBACK GOOGLE COMPLETADO ===");
 
+        unset($_SESSION['callbackUrl']);
+
         $res->redirect($callbackUrl);
+
     } catch (\Exception $e) {
         error_log("=== CALLBACK GOOGLE ERROR ===");
         error_log("Callback: Exception: " . $e->getMessage());

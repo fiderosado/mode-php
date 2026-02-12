@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -167,6 +168,7 @@
     <!-- Incluir SerJS -->
     <script src="../../SerJS/SerJS.js"></script>
 </head>
+
 <body>
     <div class="container">
         <h1>🧭 Navegación SerJS</h1>
@@ -178,13 +180,13 @@
             <div class="info-grid">
                 <div class="info-label">Pathname:</div>
                 <div class="info-value" id="current-pathname"></div>
-                
+
                 <div class="info-label">Search:</div>
                 <div class="info-value" id="current-search"></div>
-                
+
                 <div class="info-label">Hash:</div>
                 <div class="info-value" id="current-hash"></div>
-                
+
                 <div class="info-label">Query Params:</div>
                 <div class="info-value" id="current-query"></div>
             </div>
@@ -291,7 +293,7 @@
         // ACTUALIZAR INFORMACIÓN
         // ====================================
         async function updateCurrentInfo() {
-            
+
             const pathname = await navigation.usePathname();
             const searchParams = await navigation.useSearchParams();
             const query = await navigation.useQuery();
@@ -340,12 +342,12 @@
         useRef('btn-add-param').onClick(async () => {
             const key = paramKeyRef.current?.value;
             const value = paramValueRef.current?.value;
-            
+
             if (key && value) {
                 logEvent(`➕ Agregando param: ${key}=${value}`);
                 await navigation.setQueryParams({ [key]: value });
                 updateCurrentInfo();
-                
+
                 if (paramKeyRef.current) paramKeyRef.current.value = '';
                 if (paramValueRef.current) paramValueRef.current.value = '';
             }
@@ -400,9 +402,9 @@
         });
 
         useRef('btn-build-url').onClick(async () => {
-            const result = await navigation.buildUrl('/productos', { 
-                categoria: 'electronica', 
-                sort: 'precio' 
+            const result = await navigation.buildUrl('/productos', {
+                categoria: 'electronica',
+                sort: 'precio'
             });
             setText(utilsOutputRef, `buildUrl() = "${result}"`);
             logEvent(`🛠️ buildUrl() = "${result}"`);
@@ -438,4 +440,5 @@
         });
     </script>
 </body>
+
 </html>

@@ -86,10 +86,10 @@ final class HttpResponse
     ): void {
 
         $defaults = [
-            'expires'  => 0,
-            'path'     => '/',
-            'domain'   => null,
-            'secure'   => self::isHttps(),
+            'expires' => 0,
+            'path' => '/',
+            'domain' => null,
+            'secure' => self::isHttps(),
             'httpOnly' => true,
             'sameSite' => 'Strict',
         ];

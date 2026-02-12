@@ -49,10 +49,10 @@ $AuthConfig = [
             error_log("Callback signIn ejecutado");
             error_log("  - User: " . json_encode($user));
             error_log("  - Provider: " . $provider);
-            
+
             // Aquí puedes validar el usuario, crear en BD si no existe, etc.
             // Retornar false rechaza el inicio de sesión
-            
+        
             return true;
         },
 
@@ -61,7 +61,7 @@ $AuthConfig = [
             error_log("  - Token inicial: " . json_encode($token));
             error_log("  - User: " . json_encode($user));
             error_log("  - Provider: " . $provider);
-            
+
             // Construir el payload del JWT con los datos del usuario
             $jwtPayload = [
                 'sub' => $user['sub'] ?? $user['id'] ?? $user['email'],
@@ -71,7 +71,7 @@ $AuthConfig = [
 
             // Agregar campos adicionales de Google si existen
             if (isset($user['picture'])) {
-                $jwtPayload['image'] = $user['picture'];
+                $jwtPayload['picture'] = $user['picture'];
             }
             if (isset($user['email_verified'])) {
                 $jwtPayload['email_verified'] = $user['email_verified'];
@@ -92,10 +92,10 @@ $AuthConfig = [
             error_log("Callback session ejecutado");
             error_log("  - Session: " . json_encode($session));
             error_log("  - User: " . json_encode($user));
-            
+
             // Aquí puedes agregar datos adicionales a la sesión
             // $session['customField'] = 'customValue';
-            
+        
             return $session;
         },
 
@@ -103,15 +103,29 @@ $AuthConfig = [
             error_log("Callback redirect ejecutado");
             error_log("  - URL solicitada: " . $url);
             error_log("  - Base URL: " . $baseUrl);
-            
-            // Validar que la URL sea segura
-            if (!empty($url) && str_starts_with($url, $baseUrl)) {
-                error_log("  - Redirigiendo a: " . $url);
+
+            // Si la URL está vacía, usar default
+            if (empty($url)) {
+                $defaultUrl = $baseUrl . '/';
+                error_log("  - URL vacía, redirigiendo a default: " . $defaultUrl);
+                return $defaultUrl;
+            }
+
+            // Si es una ruta relativa (comienza con /), es segura
+            if (str_starts_with($url, '/')) {
+                error_log("  - Ruta relativa válida: " . $url);
                 return $url;
             }
-            
+
+            // Si es una URL completa, validar que comience con baseUrl
+            if (str_starts_with($url, $baseUrl)) {
+                error_log("  - URL completa válida: " . $url);
+                return $url;
+            }
+
+            // URL no segura, usar default
             $defaultUrl = $baseUrl . '/';
-            error_log("  - Redirigiendo a default: " . $defaultUrl);
+            error_log("  - URL no segura, redirigiendo a default: " . $defaultUrl);
             return $defaultUrl;
         },
 
