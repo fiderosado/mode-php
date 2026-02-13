@@ -89,7 +89,7 @@ Http::in(function ($req, $res) {
         }
     } catch (\Exception $e) {
         // Log del error
-        error_log("Error en signin: " . $e->getMessage());
+
 
         $res->json([
             'status' => 'error',

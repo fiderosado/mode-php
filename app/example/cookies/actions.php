@@ -13,15 +13,19 @@ ServerAction::define('create-cookie', function ($data, $params) {
 
     $domain = $_ENV['COOKIE_DOMAIN'] ?? ($_SERVER['SERVER_NAME'] ?? '');
 
+    if (!empty($domain) && str_starts_with($domain, '.')) {
+        $domain = preg_replace('/^\./', '', $domain);
+    }
+
     $cookies = Cookie::response();
     $cookies->set(
         'example-cookie',
         $token,
         [
             'expires' => time() + 3600,
-            'path' =>  '/',
+            'path' => '/',
             'domain' => $domain,
-            'secure' =>  false,
+            'secure' => false,
             'httpOnly' => true,
             'sameSite' => 'Lax'
         ]
@@ -29,7 +33,7 @@ ServerAction::define('create-cookie', function ($data, $params) {
 
     $exist = $cookies->getAll();
 
-    error_log("aver esto--->" . json_encode($exist));
+
 
     HttpResponse::json([
         'success' => [

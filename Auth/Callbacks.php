@@ -48,7 +48,7 @@ class Callbacks
 
     public static function error(string $error): string
     {
-        error_log("Auth Error: " . $error);
+
 
         return match ($error) {
             'Callback' => 'Error de callback',

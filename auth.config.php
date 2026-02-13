@@ -46,9 +46,9 @@ $AuthConfig = [
 
     'callbacks' => [
         'signIn' => function (array $user, string $provider = '') {
-            error_log("Callback signIn ejecutado");
-            error_log("  - User: " . json_encode($user));
-            error_log("  - Provider: " . $provider);
+
+
+
 
             // Aquí puedes validar el usuario, crear en BD si no existe, etc.
             // Retornar false rechaza el inicio de sesión
@@ -57,10 +57,10 @@ $AuthConfig = [
         },
 
         'jwt' => function (array $token, array $user = [], string $provider = '', array $profile = [], bool $isNewUser = false) {
-            error_log("Callback jwt ejecutado");
-            error_log("  - Token inicial: " . json_encode($token));
-            error_log("  - User: " . json_encode($user));
-            error_log("  - Provider: " . $provider);
+
+
+
+
 
             // Construir el payload del JWT con los datos del usuario
             $jwtPayload = [
@@ -83,15 +83,15 @@ $AuthConfig = [
                 $jwtPayload['family_name'] = $user['family_name'];
             }
 
-            error_log("  - JWT payload final: " . json_encode($jwtPayload));
+
 
             return $jwtPayload;
         },
 
         'session' => function (array $session, array $user = []) {
-            error_log("Callback session ejecutado");
-            error_log("  - Session: " . json_encode($session));
-            error_log("  - User: " . json_encode($user));
+
+
+
 
             // Aquí puedes agregar datos adicionales a la sesión
             // $session['customField'] = 'customValue';
@@ -100,32 +100,32 @@ $AuthConfig = [
         },
 
         'redirect' => function (string $url = '', string $baseUrl = '') {
-            error_log("Callback redirect ejecutado");
-            error_log("  - URL solicitada: " . $url);
-            error_log("  - Base URL: " . $baseUrl);
+
+
+
 
             // Si la URL está vacía, usar default
             if (empty($url)) {
                 $defaultUrl = $baseUrl . '/';
-                error_log("  - URL vacía, redirigiendo a default: " . $defaultUrl);
+
                 return $defaultUrl;
             }
 
             // Si es una ruta relativa (comienza con /), es segura
             if (str_starts_with($url, '/')) {
-                error_log("  - Ruta relativa válida: " . $url);
+
                 return $url;
             }
 
             // Si es una URL completa, validar que comience con baseUrl
             if (str_starts_with($url, $baseUrl)) {
-                error_log("  - URL completa válida: " . $url);
+
                 return $url;
             }
 
             // URL no segura, usar default
             $defaultUrl = $baseUrl . '/';
-            error_log("  - URL no segura, redirigiendo a default: " . $defaultUrl);
+
             return $defaultUrl;
         },
 
@@ -136,19 +136,19 @@ $AuthConfig = [
 
     'events' => [
         'signin' => function (array $message = []) {
-            error_log("Event signin disparado: " . json_encode($message));
+
         },
 
         'signout' => function () {
-            error_log("Event signout disparado");
+
         },
 
         'signInError' => function (array $message = []) {
-            error_log("Event signInError disparado: " . json_encode($message));
+
         },
 
         'signInSuccess' => function (array $message = []) {
-            error_log("Event signInSuccess disparado: " . json_encode($message));
+
         }
     ]
 ];

@@ -23,7 +23,7 @@ class Credentials implements Provider
                 $stmt->execute([$email]);
                 return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
             } catch (\Exception $e) {
-                error_log("Database error: " . $e->getMessage());
+
                 return null;
             }
         }
@@ -68,7 +68,7 @@ class Credentials implements Provider
 
                 return $this->findUserById($userId);
             } catch (\Exception $e) {
-                error_log("Error creando usuario: " . $e->getMessage());
+
                 return null;
             }
         }
@@ -84,7 +84,7 @@ class Credentials implements Provider
                 $stmt->execute([$id]);
                 return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
             } catch (\Exception $e) {
-                error_log("Database error: " . $e->getMessage());
+
                 return null;
             }
         }

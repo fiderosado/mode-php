@@ -44,6 +44,8 @@
   --text-2xl--line-height: calc(2 / 1.5);
   --text-3xl: 1.875rem;
   --text-3xl--line-height: calc(2.25 / 1.875);
+  --text-5xl: 3rem;
+  --text-5xl--line-height: 1;
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-bold: 700;
@@ -201,6 +203,9 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 .mt-4 {
   margin-top: calc(var(--spacing) * 4);
 }
+.mt-10 {
+  margin-top: calc(var(--spacing) * 10);
+}
 .mb-2 {
   margin-bottom: calc(var(--spacing) * 2);
 }
@@ -260,6 +265,9 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 }
 .\!flex-col {
   flex-direction: column !important;
+}
+.flex-col {
+  flex-direction: column;
 }
 .items-center {
   align-items: center;
@@ -385,6 +393,10 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 .text-3xl {
   font-size: var(--text-3xl);
   line-height: var(--tw-leading, var(--text-3xl--line-height));
+}
+.text-5xl {
+  font-size: var(--text-5xl);
+  line-height: var(--tw-leading, var(--text-5xl--line-height));
 }
 .text-sm {
   font-size: var(--text-sm);

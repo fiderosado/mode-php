@@ -29,7 +29,7 @@ Http::in(function ($req, $res) {
             'providers' => $providers
         ]);
     } catch (\Exception $e) {
-        error_log("Error al obtener proveedores: " . $e->getMessage());
+
         $res->json([
             'status' => 'error',
             'error' => 'Error al obtener proveedores',

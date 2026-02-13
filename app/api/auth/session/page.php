@@ -31,7 +31,7 @@ Http::in(function ($req, $res) {
             'session' => $session
         ]);
     } catch (\Exception $e) {
-        error_log("Error al obtener sesión: " . $e->getMessage());
+
         $res->json([
             'status' => 'error',
             'error' => 'Error al obtener la sesión',

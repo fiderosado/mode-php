@@ -13,13 +13,13 @@ Http::in(function ($req, $res) {
     $Auth = require __DIR__ . '/../../../../auth.config.php';
 
     // Verificar método HTTP
-    if ($req->method() !== 'POST') {
+/*     if ($req->method() !== 'POST') {
         $res->json([
             'error' => 'Method Not Allowed',
             'message' => 'Este endpoint solo acepta peticiones POST'
         ], ['status' => 405]);
     }
-
+ */
     try {
         // Cerrar la sesión
         $Auth->signOut();
@@ -28,7 +28,7 @@ Http::in(function ($req, $res) {
             'message' => 'Sesión cerrada correctamente'
         ]);
     } catch (\Exception $e) {
-        error_log("Error al cerrar sesión: " . $e->getMessage());
+
         $res->json([
             'status' => 'error',
             'error' => 'Error al cerrar sesión',

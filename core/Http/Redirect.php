@@ -1,13 +1,10 @@
 <?php
-
 namespace Core\Http;
-
 class Redirect
 {
     private string $url;
     private int $statusCode;
     private array $withData = [];
-
     /**
      * Constructor privado para forzar uso de métodos estáticos
      */
@@ -16,16 +13,13 @@ class Redirect
         $this->url = $url;
         $this->statusCode = $statusCode;
     }
-
     /**
      * Crear redirección a una URL
      */
     public static function to(string $url, int $statusCode = 302): self
     {
-        error_log("Esoy redirigiendo a :" . $url . "|" . $statusCode);
         return new self($url, $statusCode);
     }
-
     /**
      * Redirigir a la página anterior (referer)
      */
@@ -34,7 +28,6 @@ class Redirect
         $referer = $_SERVER['HTTP_REFERER'] ?? '/';
         return new self($referer, $statusCode);
     }
-
     /**
      * Redirigir a la ruta actual (reload)
      */
@@ -43,7 +36,6 @@ class Redirect
         $currentUrl = $_SERVER['REQUEST_URI'] ?? '/';
         return new self($currentUrl, $statusCode);
     }
-
     /**
      * Agregar datos flash a la sesión
      * Útil para mensajes de éxito/error
@@ -56,7 +48,6 @@ class Redirect
         $this->withData[$key] = $value;
         return $this;
     }
-
     /**
      * Agregar múltiples datos flash
      */
@@ -65,7 +56,6 @@ class Redirect
         $this->withData = array_merge($this->withData, $data);
         return $this;
     }
-
     /**
      * Agregar mensaje de éxito
      */
@@ -73,7 +63,6 @@ class Redirect
     {
         return $this->with('success', $message);
     }
-
     /**
      * Agregar mensaje de error
      */
@@ -81,7 +70,6 @@ class Redirect
     {
         return $this->with('error', $message);
     }
-
     /**
      * Agregar errores de validación
      */
@@ -89,7 +77,6 @@ class Redirect
     {
         return $this->with('errors', $errors);
     }
-
     /**
      * Ejecutar la redirección
      */
@@ -100,18 +87,15 @@ class Redirect
             if (session_status() === PHP_SESSION_NONE) {
                 session_start();
             }
-
             foreach ($this->withData as $key => $value) {
                 $_SESSION['_flash'][$key] = $value;
             }
         }
-
         // Realizar la redirección
         http_response_code($this->statusCode);
         header("Location: {$this->url}");
         exit;
     }
-
     /**
      * Obtener la URL de redirección (sin ejecutar)
      */
@@ -119,7 +103,6 @@ class Redirect
     {
         return $this->url;
     }
-
     /**
      * Obtener el código de estado
      */

@@ -76,64 +76,6 @@ final class HttpResponse
     }
 
     /* =========================
-       SECURE COOKIE
-       ========================= */
-
-    public static function setCookie(
-        string $name,
-        string $value,
-        array $options = []
-    ): void {
-
-        $defaults = [
-            'expires' => 0,
-            'path' => '/',
-            'domain' => null,
-            'secure' => self::isHttps(),
-            'httpOnly' => true,
-            'sameSite' => 'Strict',
-        ];
-
-        $opts = array_merge($defaults, $options);
-
-        /* =========================
-           Prefijos de seguridad
-           ========================= */
-
-        if (str_starts_with($name, '__Host-')) {
-            $opts['secure'] = true;
-            $opts['path'] = '/';
-            $opts['domain'] = null;
-        }
-
-        if (str_starts_with($name, '__Secure-')) {
-            $opts['secure'] = true;
-        }
-
-        /* =========================
-           Validaciones duras
-           ========================= */
-
-        if ($opts['sameSite'] === 'None' && !$opts['secure']) {
-            throw new RuntimeException(
-                'SameSite=None requiere Secure=true'
-            );
-        }
-
-        // 🔥 Aquí usamos tu sistema de cookies
-        self::cookies()->set($name, $value, $opts);
-    }
-
-    /* =========================
-       DELETE COOKIE
-       ========================= */
-
-    public static function deleteCookie(string $name): void
-    {
-        self::cookies()->delete($name);
-    }
-
-    /* =========================
        REDIRECT
        ========================= */
 

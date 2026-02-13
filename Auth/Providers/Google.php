@@ -25,7 +25,7 @@ class Google implements Provider
             throw new Exception("Google: clientId y clientSecret son requeridos");
         }
 
-        error_log("Google Provider inicializado - ClientId: {$this->clientId}, RedirectUri: {$this->redirectUri}");
+
     }
 
     public function getAuthorizationUrl(string $state = ''): string
@@ -45,9 +45,9 @@ class Google implements Provider
                 'sameSite' => 'Lax'
             ]);
             
-            error_log("Google: State generado y guardado en sesión y cookie: {$state}");
+
         } else {
-            error_log("Google: Usando state proporcionado: {$state}");
+
         }
 
         $authUrl = "https://accounts.google.com/o/oauth2/v2/auth?" . http_build_query([
@@ -60,15 +60,15 @@ class Google implements Provider
             'prompt' => 'consent'
         ]);
 
-        error_log("Google: URL de autorización generada: {$authUrl}");
+
         
         return $authUrl;
     }
 
     private function exchangeCodeForToken(string $code): ?array
     {
-        error_log("Google: Iniciando intercambio de código por token");
-        error_log("Google: Code: {$code}");
+
+
         
         try {
             $payload = [
@@ -79,23 +79,23 @@ class Google implements Provider
                 'grant_type' => 'authorization_code'
             ];
 
-            error_log("Google: Payload para intercambio: " . json_encode($payload));
+
 
             $response = Connect::post('https://oauth2.googleapis.com/token', $payload);
             
-            error_log("Google: Respuesta de token completa: " . json_encode($response));
+
 
             return $response;
         } catch (Exception $e) {
-            error_log("Google: Error intercambiando código: " . $e->getMessage());
-            error_log("Google: Stack trace: " . $e->getTraceAsString());
+
+
             return null;
         }
     }
 
     private function getUserInfo(string $accessToken): ?array
     {
-        error_log("Google: Obteniendo información del usuario con access token");
+
         
         try {
             $response = Connect::get('https://openidconnect.googleapis.com/v1/userinfo', [
@@ -104,24 +104,24 @@ class Google implements Provider
                 ]
             ]);
             
-            error_log("Google: Respuesta de userinfo completa: " . json_encode($response));
+
             
             return $response;
         } catch (Exception $e) {
-            error_log("Google: Error obteniendo info del usuario: " . $e->getMessage());
-            error_log("Google: Stack trace: " . $e->getTraceAsString());
+
+
             return null;
         }
     }
 
     public function authorize(array $credentials): ?array
     {
-        error_log("Google->authorize() iniciado con credentials: " . json_encode($credentials));
+
         
         $code = $credentials['code'] ?? null;
 
         if (!$code) {
-            error_log("Google: No se proporcionó código de autorización");
+
             return null;
         }
 
@@ -129,54 +129,54 @@ class Google implements Provider
         $tokenData = $this->exchangeCodeForToken($code);
 
         if (!is_array($tokenData) || !isset($tokenData['success']['data']['access_token'])) {
-            error_log("Google: Error en intercambio de token - respuesta inválida");
+
             return null;
         }
 
         $accessToken = $tokenData['success']['data']['access_token'];
-        error_log("Google: Access token obtenido exitosamente");
+
 
         // Obtener información del usuario
         $userInfo = $this->getUserInfo($accessToken);
 
         if (isset($userInfo['error'])) {
-            error_log("Google: Error en info del usuario: " . json_encode($userInfo['error']));
+
             return null;
         }
 
         $userData = $userInfo["success"]["data"] ?? null;
 
         if (!$userData) {
-            error_log("Google: No se pudo obtener datos del usuario");
+
             return null;
         }
 
-        error_log("Google: Datos del usuario obtenidos exitosamente: " . json_encode($userData));
+
 
         return $userData;
     }
 
     public function handleCallback(): void
     {
-        error_log("Google->handleCallback() NO DEBERÍA SER LLAMADO - usar Auth->signIn() desde el callback route");
+
         
         $code = $_GET['code'] ?? null;
         $state = $_GET['state'] ?? null;
         $error = $_GET['error'] ?? null;
 
         if ($error) {
-            error_log("Google: Error en callback de Google: {$error}");
+
             header('Location: /auth/error?error=' . urlencode($error));
             exit;
         }
 
         if (!$code) {
-            error_log("Google: Callback sin código");
+
             header('Location: /auth/error?error=missing_code');
             exit;
         }
 
-        error_log("Google: handleCallback() debería delegar a Auth->signIn() en lugar de procesar directamente");
+
         header('Location: /auth/error?error=deprecated_handler');
         exit;
     }
