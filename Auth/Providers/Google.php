@@ -32,19 +32,19 @@ class Google implements Provider
     {
         if (empty($state)) {
             $state = bin2hex(random_bytes(16));
-            
+
             // Guardar state en sesión Y en cookie como backup
             $_SESSION['oauth_state'] = $state;
-            
+
             // Usar la clase Cookie para establecer una cookie de backup del state
             $cookies = Cookie::response();
             $cookies->set('oauth_state_backup', $state, [
-                'expires' => time() + 600, // 10 minutos
+                'maxAge' => 600, // 10 minutos
                 'path' => '/',
                 'httpOnly' => true,
-                'sameSite' => 'Lax'
+                'sameSite' => 'lax'
             ]);
-            
+
 
         } else {
 
@@ -61,7 +61,7 @@ class Google implements Provider
         ]);
 
 
-        
+
         return $authUrl;
     }
 
@@ -69,7 +69,7 @@ class Google implements Provider
     {
 
 
-        
+
         try {
             $payload = [
                 'code' => $code,
@@ -82,7 +82,7 @@ class Google implements Provider
 
 
             $response = Connect::post('https://oauth2.googleapis.com/token', $payload);
-            
+
 
 
             return $response;
@@ -96,16 +96,16 @@ class Google implements Provider
     private function getUserInfo(string $accessToken): ?array
     {
 
-        
+
         try {
             $response = Connect::get('https://openidconnect.googleapis.com/v1/userinfo', [
                 'headers' => [
                     'Authorization' => "Bearer {$accessToken}",
                 ]
             ]);
-            
 
-            
+
+
             return $response;
         } catch (Exception $e) {
 
@@ -117,7 +117,7 @@ class Google implements Provider
     public function authorize(array $credentials): ?array
     {
 
-        
+
         $code = $credentials['code'] ?? null;
 
         if (!$code) {
@@ -159,7 +159,7 @@ class Google implements Provider
     public function handleCallback(): void
     {
 
-        
+
         $code = $_GET['code'] ?? null;
         $state = $_GET['state'] ?? null;
         $error = $_GET['error'] ?? null;

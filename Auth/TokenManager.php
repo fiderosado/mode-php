@@ -41,7 +41,8 @@ class TokenManager
     {
         // Usar la clase Cookie para leer cookies
         $cookies = Cookie::request();
-        return $cookies->get($this->cookieName);
+        $cookie = $cookies->get($this->cookieName);
+        return $cookie?->value;
     }
     public function getTokenFromRequest(): ?string
     {
@@ -51,30 +52,28 @@ class TokenManager
         }
         // Usar la clase Cookie para leer cookies
         $cookies = Cookie::request();
-        return $cookies->get($this->cookieName);
+        $cookie = $cookies->get($this->cookieName);
+        return $cookie?->value;
     }
     public function setTokenCookie(string $token, string $path = '/'): void
     {
-        $domain = $_ENV['COOKIE_DOMAIN'] ?? $_SERVER['SERVER_NAME'] ?? '';
+        $domain = $_ENV['COOKIE_DOMAIN'] ?? '';
         $isSecure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
         // Para desarrollo local
         if (in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1'])) {
             $isSecure = false;
             $domain = '';
         }
-        // Eliminar el primer punto si existe (ej: .domain -> domain)
-        if (!empty($domain) && str_starts_with($domain, '.')) {
-            $domain = preg_replace('/^\./', '', $domain);
-        }
+
         // Usar la clase Cookie para establecer cookies
         $cookies = Cookie::response();
         $cookies->set($this->cookieName, $token, [
-            'expires' => time() + $this->expiration,
+            'maxAge' => $this->expiration,
             'path' => $path,
-            'domain' => $domain,
+            'domain' => $domain ?: null,
             'secure' => $isSecure,
             'httpOnly' => true,
-            'sameSite' => 'Lax'
+            'sameSite' => 'lax'
         ]);
     }
     public function removeTokenCookie(): void

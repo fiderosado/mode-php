@@ -11,34 +11,39 @@ ServerAction::define('create-cookie', function ($data, $params) {
 
     $token = uniqid();
 
-    $domain = $_ENV['COOKIE_DOMAIN'] ?? ($_SERVER['SERVER_NAME'] ?? '');
-
-    if (!empty($domain) && str_starts_with($domain, '.')) {
-        $domain = preg_replace('/^\./', '', $domain);
-    }
+    $domain = $_ENV['COOKIE_DOMAIN'] ?? '';
 
     $cookies = Cookie::response();
     $cookies->set(
         'example-cookie',
         $token,
         [
-            'expires' => time() + 3600,
+            'maxAge' => 3600,
             'path' => '/',
-            'domain' => $domain,
+            'domain' => $domain ?: null,
             'secure' => false,
             'httpOnly' => true,
-            'sameSite' => 'Lax'
+            'sameSite' => 'lax'
         ]
     );
 
-    $exist = $cookies->getAll();
-
-
+    $allCookies = $cookies->getAll();
+    $cookiesData = [];
+    foreach ($allCookies as $cookie) {
+        $cookiesData[$cookie->name] = [
+            'value' => $cookie->value,
+            'path' => $cookie->path,
+            'domain' => $cookie->domain,
+            'secure' => $cookie->secure,
+            'httpOnly' => $cookie->httpOnly,
+        ];
+    }
 
     HttpResponse::json([
         'success' => [
             'message' => "Cookie Generada",
-            "data" => $exist
+            "data" => $cookiesData,
+            'domain' => $domain,
         ]
     ]);
 });

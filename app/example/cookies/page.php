@@ -5,7 +5,13 @@ use Core\Http\CSRF;
 use Core\Cookies\Cookie;
 
 $request = Cookie::request();
-$cookies = $request->getAll();
+$allCookies = $request->getAll();
+
+// Convertir RequestCookie objects a array para la vista
+$cookies = [];
+foreach ($allCookies as $cookie) {
+    $cookies[$cookie->name] = $cookie->value;
+}
 
 // Generar parámetro aleatorio para forzar la recarga del CSS
 $cssCacheBuster = random_int(1000, 9999);

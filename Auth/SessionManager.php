@@ -19,17 +19,15 @@ class SessionManager
         // Solo iniciar sesión si no está iniciada
         if (session_status() === PHP_SESSION_NONE) {
             // Obtener el dominio (igual que en TokenManager)
-            $domain = $_ENV['COOKIE_DOMAIN'] ?? $_SERVER['SERVER_NAME'] ?? '';
+            $domain = $_ENV['COOKIE_DOMAIN'] ?? '';
+
             $isSecure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
             // Para desarrollo local
             if (in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1'])) {
                 $isSecure = false;
                 $domain = '';
             }
-            // Eliminar el primer punto si existe
-            if (!empty($domain) && str_starts_with($domain, '.')) {
-                $domain = preg_replace('/^\./', '', $domain);
-            }
+
             // Configurar cookies de sesión ANTES de session_start()
             session_set_cookie_params([
                 'lifetime' => $this->config['maxAge'],
@@ -122,7 +120,7 @@ class SessionManager
     public function destroy(): void
     {
         // Obtener el dominio usado al crear las cookies (igual que en TokenManager)
-        $domain = $_ENV['COOKIE_DOMAIN'] ?? $_SERVER['SERVER_NAME'] ?? '';
+        $domain = $_ENV['COOKIE_DOMAIN'] ?? '';
         $isSecure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
         // Para desarrollo local
         if (in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1'])) {
@@ -132,26 +130,11 @@ class SessionManager
         // 1. Eliminar datos de sesión específicos
         unset($_SESSION[$this->config['session_name']]);
         // 2. Eliminar cookies con el mismo dominio usado al crearlas
-        $cookiesToDelete = [
-            'auth.session-token',
-            'auth',
-            'oauth_state_backup'
-        ];
-        // Eliminar el punto inicial si existe
-        $domainClean = $domain;
-        if (!empty($domainClean) && str_starts_with($domainClean, '.')) {
-            $domainClean = preg_replace('/^\./', '', $domainClean);
-        }
-        foreach ($cookiesToDelete as $cookieName) {
-            setcookie($cookieName, '', [
-                'expires' => time() - 3600,
-                'path' => '/',
-                'domain' => $domainClean,
-                'secure' => $isSecure,
-                'httponly' => true,
-                'samesite' => 'Lax'
-            ]);
-        }
+        $cookies = Cookie::response();
+        $cookies->delete('auth.session-token');
+        $cookies->delete('auth');
+        $cookies->delete('oauth_state_backup');
+
         // 3. Limpiar todas las variables de sesión
         $_SESSION = [];
         // 4. Destruir la sesión completamente

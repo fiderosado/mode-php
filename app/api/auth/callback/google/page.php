@@ -52,6 +52,7 @@ Http::in(function ($req, $res) {
         // Usar Cookie::request() para leer cookies
         $requestCookies = Cookie::request();
         $stateBackupCookie = $requestCookies->get('oauth_state_backup');
+        $stateBackupValue = $stateBackupCookie?->value;
 
 
 
@@ -65,7 +66,7 @@ Http::in(function ($req, $res) {
         }
 
         // Intentar obtener state de sesión o cookie backup
-        $savedState = $_SESSION['oauth_state'] ?? $stateBackupCookie ?? null;
+        $savedState = $_SESSION['oauth_state'] ?? $stateBackupValue ?? null;
 
         if (!$savedState) {
 

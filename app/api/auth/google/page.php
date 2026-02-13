@@ -59,10 +59,10 @@ Http::in(function ($req, $res) {
         // Usar Cookie::response() para establecer la cookie
         $cookies = Cookie::response();
         $cookies->set('oauth_state_backup', $state, [
-            'expires' => time() + 600,  // 10 minutos
+            'maxAge' => 600,  // 10 minutos
             'path' => '/',
             'httpOnly' => true,
-            'sameSite' => 'Lax'
+            'sameSite' => 'lax'
         ]);
 
 
