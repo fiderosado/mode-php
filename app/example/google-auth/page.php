@@ -3,8 +3,10 @@ session_start();
 use Core\Http\CSRF;
 
 ?>
+
 <main class="flex min-h-screen flex-col items-center justify-center bg-[#f8f9fa] px-4">
-    <div class="w-full max-w-[420px] rounded-2xl bg-white px-10 py-12">
+
+    <div id="login-content" class="w-full max-w-[420px] rounded-2xl bg-white px-10 py-12">
         <h1 class="mb-2 text-center text-2xl font-normal text-[#202124]">
             Iniciar sesion
         </h1>
@@ -36,9 +38,10 @@ use Core\Http\CSRF;
             </a>
         </p>
     </div>
-    <div class="w-full max-w-[420px] rounded-2xl bg-white px-10 py-12">
-        <h1 class="text-5xl font-bold">
-            Welcome Fidel
+
+    <div id="logued-content" class="w-full hidden max-w-[420px] rounded-2xl bg-white px-10 py-12">
+        <h1 id="user-label" class="text-5xl font-bold">
+            Welcome ${user}
         </h1>
         <a id="google-logout-button" href="https://accounts.google.com/signin"
             class="mb-6 mt-10 flex w-full items-center justify-center gap-3 rounded-lg border border-[#dadce0] bg-white px-6 py-3 text-sm font-medium text-[#3c4043] no-underline transition-all hover:border-[#d2e3fc] hover:bg-[#f8fbff] hover:shadow-sm">
@@ -59,40 +62,101 @@ use Core\Http\CSRF;
             Cerrar session
         </a>
     </div>
-    <script type="module">
-        const {
-            useRef,
-            useState,
-            useEffect,
-            Actions,
-            navigation
-        } = SerJS;
 
-        async function handleGoogleLogin() {
-            console.log("esto se esta ejecutando aki..")
-            await navigation.push('/api/auth/google?callbackUrl=/example/google-auth');
-        }
-
-        const googleLoginButtonRef = useRef('google-login-button');
-        googleLoginButtonRef.onClick((e) => {
-            e.preventDefault();
-            handleGoogleLogin();
-        })
-
-        const googleLogoutButtonRef = useRef('google-logout-button');
-
-        googleLogoutButtonRef.onClick((e) => {
-            e.preventDefault();
-            console.log("cerrar session");
-            // usar accion
-            handleLogout()
-        })
-
-        async function handleLogout(params) {
-            const resonse_logout = await Actions(`<?= CSRF::token(); ?>`);
-            const response = await resonse_logout.call('logout-session', { enabled: true });
-            console.log("googleLogoutButtonRef:", response);
-        }
-
-    </script>
 </main>
+<script type="module">
+    const {
+        useRef,
+        useState,
+        useEffect,
+        Actions,
+        navigation,
+        cookies,
+        reRender
+    } = SerJS;
+
+    const [session, setSession] = useState(null);
+
+    const loginContentRef = useRef('login-content');
+    const loguedContentRef = useRef('logued-content');
+    const userLabelRef = useRef('user-label');
+
+    useEffect(() => {
+        if (session.current !== null) {
+            console.log("oculto el login..")
+            loginContentRef.addClass("hidden");// si hay session ocultar
+            loguedContentRef.removeClass("hidden");
+            reRender(userLabelRef, { user: session.current?.given_name ?? "" });
+        } else {
+            console.log("muestro el login..")
+            reRender(userLabelRef, { user: "" });
+            loginContentRef.removeClass("hidden");// si no hay mostrar
+            loguedContentRef.addClass("hidden");
+        }
+
+    }, [session, session.current])
+
+    async function getAuthTokenFromCookies() {
+        try {
+            // Obtener todas las cookies para debug
+            const allCookies = await cookies.getCookies();
+            //console.log("Todas las cookies:", allCookies);
+
+            // Obtener el token de autenticación
+            const token = await cookies.getCookie('auth.session-token');
+            console.log("Token de autenticación:", token);
+
+            if (token) {
+                // También podemos llamar al endpoint para obtener la sesión completa
+                const response = await fetch('/api/auth/session', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                console.log("Sesión completa:", data);
+
+                if (data.authenticated && data?.session) {
+                    console.log("Usuario autenticado:", data?.session.user);
+                    setSession(data?.session.user)
+                } else {
+                    setSession(null)
+                }
+            } else {
+                console.log("No hay token de autenticación");
+                setSession(null);
+            }
+        } catch (error) {
+            console.error("Error al obtener token:", error);
+            setSession(null);
+        }
+    }
+
+    useEffect(() => {
+        getAuthTokenFromCookies();
+    }, [])
+
+    async function handleGoogleLogin() {
+        await navigation.push('/api/auth/google?callbackUrl=/example/google-auth');
+    }
+
+    const googleLoginButtonRef = useRef('google-login-button');
+    googleLoginButtonRef.onClick((e) => {
+        e.preventDefault();
+        handleGoogleLogin();
+    })
+
+    const googleLogoutButtonRef = useRef('google-logout-button');
+    googleLogoutButtonRef.onClick((e) => {
+        e.preventDefault();
+        console.log("cerrar session");
+        handleLogout();
+    })
+
+    async function handleLogout(params) {
+        const resonse_logout = await Actions(`<?= CSRF::token(); ?>`);
+        const response = await resonse_logout.call('logout-session', { enabled: true });
+        getAuthTokenFromCookies();
+    }
+
+</script>

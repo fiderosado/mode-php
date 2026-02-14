@@ -72,7 +72,7 @@ class TokenManager
             'path' => $path,
             'domain' => $domain ?: null,
             'secure' => $isSecure,
-            'httpOnly' => true,
+            'httpOnly' => false, // Permitir acceso desde JavaScript
             'sameSite' => 'lax'
         ]);
     }

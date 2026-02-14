@@ -70,7 +70,8 @@ $cssCacheBuster = random_int(1000, 9999);
             useEffect,
             setText,
             setHTML,
-            Actions
+            Actions,
+            cookies
         } = SerJS;
 
         const actionBoton = useRef('toggleBtn');

@@ -160,10 +160,57 @@
             else queue.push(attach);
         };
 
+        // Métodos de eventos
         ref.onClick = (cb) => addEvent('click', cb);
         ref.onChange = (cb) => addEvent('change', cb);
         ref.onHover = (cb) => addEvent('mouseenter', cb);
         ref.on = (eventName, cb) => addEvent(eventName, cb);
+
+        // Métodos de manipulación del DOM
+        ref.setText = (text) => {
+            methods.setText(ref, text);
+            return ref;
+        };
+
+        ref.setHTML = (html) => {
+            methods.setHTML(ref, html);
+            return ref;
+        };
+
+        ref.replaceHTML = (html) => {
+            methods.replaceHTML(ref, html);
+            return ref;
+        };
+
+        ref.add = (html) => {
+            methods.add(ref, html);
+            return ref;
+        };
+
+        ref.reRender = (state = {}) => {
+            methods.reRender(ref, state);
+            return ref;
+        };
+
+        ref.addClass = (className) => {
+            methods.addClass(ref, className);
+            return ref;
+        };
+
+        ref.removeClass = (className) => {
+            methods.removeClass(ref, className);
+            return ref;
+        };
+
+        ref.setAttr = (name, value) => {
+            methods.setAttr(ref, name, value);
+            return ref;
+        };
+
+        ref.setStyle = (property, value) => {
+            methods.setStyle(ref, property, value);
+            return ref;
+        };
 
         const assign = () => {
             if (id) ref.current = document.getElementById(id);
@@ -379,6 +426,8 @@
         })();
     });
 
+    // Variable para rastrear la carga del módulo de cookies
+    let cookiesLoadingPromise = null;
 
     window.SerJS = new Proxy(methods, {
         get(target, prop) {
@@ -487,6 +536,36 @@
                                 return instance[method](...args);
                             }
                             throw new Error(`SerJSSuspense.${method} no es una función`);
+                        };
+                    }
+                });
+            }
+
+            if (prop === 'cookies') {
+                return new Proxy({}, {
+                    get(target, method) {
+                        // Si el módulo ya está cargado, devolver el método directamente
+                        if (window.SerJSCookies && typeof window.SerJSCookies[method] === 'function') {
+                            return window.SerJSCookies[method].bind(window.SerJSCookies);
+                        }
+                        
+                        // Si no está cargado, iniciar carga lazy
+                        if (!window.SerJSCookies && !cookiesLoadingPromise) {
+                            cookiesLoadingPromise = loadSerJSModule(
+                                'SerJSCookies',
+                                `${$BASE_URL}/SerJS/core/SerJSCookies.js`
+                            );
+                        }
+                        
+                        // Devolver una función que espera la carga y luego ejecuta
+                        return async (...args) => {
+                            if (cookiesLoadingPromise) {
+                                await cookiesLoadingPromise;
+                            }
+                            if (window.SerJSCookies && typeof window.SerJSCookies[method] === 'function') {
+                                return window.SerJSCookies[method](...args);
+                            }
+                            throw new Error(`SerJSCookies.${method} no está disponible`);
                         };
                     }
                 });

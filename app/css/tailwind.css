@@ -227,6 +227,9 @@ button, input:where([type='button'], [type='reset'], [type='submit']), ::file-se
 .grid {
   display: grid;
 }
+.hidden {
+  display: none;
+}
 .h-4 {
   height: calc(var(--spacing) * 4);
 }
