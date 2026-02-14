@@ -158,6 +158,7 @@ class Router
     {
         $layout = Resolver::findLayout(dirname($page));
         $cssFile = Resolver::findCSS(dirname($page));
+        $jsFile = Resolver::findJS(dirname($page));
 
         // Convertir path del CSS a URL relativa si existe
         $cssUrl = null;
@@ -165,14 +166,40 @@ class Router
             $cssUrl = self::pathToUrl($cssFile);
         }
 
-        // Pasar CSS como variable global para que esté disponible en layouts y páginas
+        // Convertir path del JS a URL relativa si existe
+        $jsUrl = null;
+        if ($jsFile) {
+            $jsUrl = self::pathToUrl($jsFile);
+        }
+
+        // Pasar CSS y JS como variables globales para que estén disponibles en layouts y páginas
         $GLOBALS['css'] = $cssUrl;
+        $GLOBALS['js'] = $jsUrl;
+
+        // Capturar el output
+        ob_start();
 
         if ($layout) {
             require $layout;
         } else {
             require $page;
         }
+
+        $html = ob_get_clean();
+
+        // Inyectar CSS automáticamente antes del </head>
+        if ($cssUrl) {
+            $linkTag = '<link rel="stylesheet" href="' . htmlspecialchars($cssUrl, ENT_QUOTES, 'UTF-8') . '">';
+            $html = preg_replace('/<\/head>/i', $linkTag . "\n</head>", $html, 1);
+        }
+
+        // Inyectar script automáticamente antes del </body>
+        if ($jsUrl) {
+            $scriptTag = '<script src="' . htmlspecialchars($jsUrl, ENT_QUOTES, 'UTF-8') . '" defer></script>';
+            $html = preg_replace('/<\/body>/i', $scriptTag . "\n</body>", $html, 1);
+        }
+
+        echo $html;
     }
 
     /**

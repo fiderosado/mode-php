@@ -30,7 +30,8 @@ class Resolver
         }
 
         foreach (glob("$basePath/*") as $dir) {
-            if (!is_dir($dir)) continue;
+            if (!is_dir($dir))
+                continue;
             $basename = basename($dir);
             // [slug] dinámico simple (EXCLUSIVO)
             if (preg_match('/^\[(?!\.\.\.)[^\[\]]+\]$/', $basename)) {
@@ -119,6 +120,31 @@ class Resolver
 
             if (file_exists($path . '/page.css')) {
                 return $path . '/page.css';
+            }
+
+            $path = dirname($path);
+        }
+
+        return null;
+    }
+
+    /**
+     * Busca archivos script.js en la ruta de la página y sus directorios padres
+     * Similar a findCSS pero para archivos JavaScript
+     */
+    public static function findJS(string $path): ?string
+    {
+        $path = self::normalizePath(realpath($path));
+
+        while ($path && $path !== dirname($path)) {
+
+            if (self::isOmittedPath($path)) {
+                $path = dirname($path);
+                continue;
+            }
+
+            if (file_exists($path . '/script.js')) {
+                return $path . '/script.js';
             }
 
             $path = dirname($path);
