@@ -5,6 +5,7 @@ const {
         Actions,
         navigation,
         cookies,
+        csrfToken,
         reRender
     } = SerJS;
 
@@ -87,7 +88,8 @@ const {
     })
 
     async function handleLogout(params) {
-        const resonse_logout = await Actions(`<?= CSRF::token(); ?>`);
+        const token = await csrfToken.getToken();
+        const resonse_logout = await Actions(token);
         const response = await resonse_logout.call('logout-session', { enabled: true });
         getAuthTokenFromCookies();
     }

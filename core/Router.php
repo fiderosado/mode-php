@@ -195,7 +195,8 @@ class Router
 
         // Inyectar script automáticamente antes del </body>
         if ($jsUrl) {
-            $scriptTag = '<script src="' . htmlspecialchars($jsUrl, ENT_QUOTES, 'UTF-8') . '" defer></script>';
+            $csrfToken = CSRF::token();
+            $scriptTag = '<script src="' . htmlspecialchars($jsUrl, ENT_QUOTES, 'UTF-8') . '" data-csrf="' . htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') . '" defer></script>';
             $html = preg_replace('/<\/body>/i', $scriptTag . "\n</body>", $html, 1);
         }
 

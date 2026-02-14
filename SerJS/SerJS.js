@@ -571,6 +571,31 @@
                 });
             }
 
+            if (prop === 'csrfToken') {
+                return new Proxy({}, {
+                    get(target, method) {
+                        // Si el módulo ya está cargado, devolver el método directamente
+                        if (window.SerJSCsrfToken && typeof window.SerJSCsrfToken[method] === 'function') {
+                            return window.SerJSCsrfToken[method].bind(window.SerJSCsrfToken);
+                        }
+                        
+                        // Si no está cargado, cargar el módulo
+                        return async (...args) => {
+                            if (!window.SerJSCsrfToken) {
+                                await loadSerJSModule(
+                                    'SerJSCsrfToken',
+                                    `${$BASE_URL}/SerJS/core/SerJSCsrfToken.js`
+                                );
+                            }
+                            if (window.SerJSCsrfToken && typeof window.SerJSCsrfToken[method] === 'function') {
+                                return window.SerJSCsrfToken[method](...args);
+                            }
+                            throw new Error(`SerJSCsrfToken.${method} no está disponible`);
+                        };
+                    }
+                });
+            }
+
             const value = target[prop];
             if (typeof value !== 'function') return value;
 
