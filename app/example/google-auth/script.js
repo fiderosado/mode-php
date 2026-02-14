@@ -17,17 +17,14 @@ const {
 
     useEffect(() => {
         if (session.current !== null) {
-            console.log("oculto el login..")
             loginContentRef.addClass("hidden");// si hay session ocultar
             loguedContentRef.removeClass("hidden");
             reRender(userLabelRef, { user: session.current?.given_name ?? "" });
         } else {
-            console.log("muestro el login..")
             reRender(userLabelRef, { user: "" });
             loginContentRef.removeClass("hidden");// si no hay mostrar
             loguedContentRef.addClass("hidden");
         }
-
     }, [session, session.current])
 
     async function getAuthTokenFromCookies() {
