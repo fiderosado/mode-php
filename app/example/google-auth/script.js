@@ -31,7 +31,7 @@ const {
         try {
             // Obtener todas las cookies para debug
             const allCookies = await cookies.getCookies();
-            //console.log("Todas las cookies:", allCookies);
+            console.log("Todas las cookies:", allCookies);
 
             // Obtener el token de autenticación
             const token = await cookies.getCookie('auth.session-token');
