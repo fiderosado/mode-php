@@ -58,10 +58,6 @@ $AuthConfig = [
 
         'jwt' => function (array $token, array $user = [], string $provider = '', array $profile = [], bool $isNewUser = false) {
 
-
-
-
-
             // Construir el payload del JWT con los datos del usuario
             $jwtPayload = [
                 'sub' => $user['sub'] ?? $user['id'] ?? $user['email'],
@@ -82,8 +78,6 @@ $AuthConfig = [
             if (isset($user['family_name'])) {
                 $jwtPayload['family_name'] = $user['family_name'];
             }
-
-
 
             return $jwtPayload;
         },
